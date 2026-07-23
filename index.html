@@ -1,0 +1,1887 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patent Pazarı — Türkiye Sınai Mülkiyet & IPC İnovasyon Eşleştirme Platformu</title>
+  <meta name="description" content="Türkiye'deki patent, faydalı model ve sınai mülkiyet sahiplerini sanayi, yatırımcı ve kurumlarla buluşturan IPC ve SMK 6769 uyumlu eşleştirme platformu.">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Outfit', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#f0f7ff',
+              100: '#e0effe',
+              500: '#0284c7',
+              600: '#0369a1',
+              700: '#075985',
+              900: '#0c4a6e',
+            },
+            slate: {
+              850: '#141e33',
+              900: '#0f172a',
+            },
+            emerald: {
+              600: '#059669',
+              700: '#047857',
+            },
+            amber: {
+              500: '#f59e0b',
+              600: '#d97706',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- React 18 & Babel Standalone CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    .font-display {
+      font-family: 'Outfit', sans-serif;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    // --- SVG ICON COMPONENT ---
+    const Icon = ({ name, className = "w-5 h-5" }) => {
+      const icons = {
+        shieldCheck: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />,
+        clock: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />,
+        search: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />,
+        filter: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />,
+        plus: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />,
+        externalLink: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />,
+        user: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />,
+        building: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />,
+        messageSquare: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />,
+        alertTriangle: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />,
+        scale: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m0 0l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 6l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 6l3 9" />,
+        fileText: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />,
+        send: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />,
+        checkCircle: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />,
+        xCircle: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />,
+        refresh: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />,
+        sparkles: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />,
+        chevronRight: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />,
+        tag: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5a1 1 0 01.707.293l7 7a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A1 1 0 013 12V7a4 4 0 014-4z" />,
+        ban: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+      };
+      return (
+        <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          {icons[name] || null}
+        </svg>
+      );
+    };
+
+    // --- CATEGORY SYSTEM STRUCTURE ---
+    
+    // KATMAN 1: Sınai Mülkiyet Hakkı Türü (SMK 6769)
+    const HAK_TURULERI = [
+      { id: 'patent', ad: 'Patent (20 Yıl Koruma)', aciklama: 'Buluş basamağı içeren teknik çözüm', birincil: true },
+      { id: 'fayidali_model', ad: 'Faydalı Model (10 Yıl Koruma)', aciklama: 'Yenilik + Sanayiye uygulanabilirlik', birincil: true },
+      { id: 'tasarim', ad: 'Endüstriyel Tasarım (Locarno)', aciklama: 'Ürün görünümü ve estetik tasarım', birincil: false },
+      { id: 'marka', ad: 'Marka (Nice Sınıfı 1-45)', aciklama: 'Kelime, Şekil, Ses, Renk, 3D Markalar', birincil: false },
+      { id: 'cografi_isaret', ad: 'Coğrafi İşaret (Mahreç / Menşe)', aciklama: 'Yöreye özgü nitelik taşıyan ürünler', birincil: false },
+      { id: 'geleneksel_urun', ad: 'Geleneksel Ürün Adı', aciklama: 'Geleneksel üretim veya malzeme', birincil: false },
+      { id: 'entegre_devre', ad: 'Entegre Devre Topografyası', aciklama: 'Mikroçip ve devre serilimi', birincil: false }
+    ];
+
+    // KATMAN 2: Teknik Sektör (IPC — Uluslararası Patent Sınıflandırması)
+    const IPC_SEKTORLERI = [
+      {
+        kod: 'A',
+        ad: 'A — İnsan İhtiyaçları',
+        aciklama: 'Tarım, Gıda, Sağlık, Tıp, Spor',
+        alt_siniflar: [
+          { kod: 'A01', ad: 'A01 — Tarım, Hayvancılık, Ormancılık' },
+          { kod: 'A23', ad: 'A23 — Gıda Maddeleri, Tütün' },
+          { kod: 'A61', ad: 'A61 — Tıp, Cerrahi, Teşhis, Cihazlar' },
+          { kod: 'A63', ad: 'A63 — Spor, Eğlence, Oyuncaklar' }
+        ]
+      },
+      {
+        kod: 'B',
+        ad: 'B — İşlemler, Taşımacılık',
+        aciklama: 'İmalat, Şekillendirme, Baskı, Ambalaj',
+        alt_siniflar: [
+          { kod: 'B01', ad: 'B01 — Ayırma, Karıştırma, Kimyasal İşlemler' },
+          { kod: 'B21', ad: 'B21/B23 — Metal Şekillendirme, İmalat' },
+          { kod: 'B41', ad: 'B41 — Baskı, Matbaacılık' },
+          { kod: 'B60', ad: 'B60/B65 — Ulaşım, Otomotiv, Ambalajlama' }
+        ]
+      },
+      {
+        kod: 'C',
+        ad: 'C — Kimya, Metalurji',
+        aciklama: 'Kimyasal Bileşikler, Alaşımlar, Biyoteknoloji',
+        alt_siniflar: [
+          { kod: 'C07', ad: 'C07 — Organik Kimya Bileşikleri' },
+          { kod: 'C12', ad: 'C12 — Biyoteknoloji, Mikrobiyoloji, Enzimler' },
+          { kod: 'C22', ad: 'C22 — Metalurji, Alaşımlar' }
+        ]
+      },
+      {
+        kod: 'D',
+        ad: 'D — Tekstil, Kağıt',
+        aciklama: 'Tekstil, Elyaf, Dokuma, Kağıt Üretimi',
+        alt_siniflar: [
+          { kod: 'D01', ad: 'D01/D06 — Tekstil Elyafı, İplik, Kumaş İşleme' },
+          { kod: 'D21', ad: 'D21 — Kağıt Yapımı, Selüloz' }
+        ]
+      },
+      {
+        kod: 'E',
+        ad: 'E — Sabit Yapılar',
+        aciklama: 'İnşaat, Yapı Elemanları, Madencilik',
+        alt_siniflar: [
+          { kod: 'E04', ad: 'E04 — Bina İnşaatı, Yapı Malzemeleri' },
+          { kod: 'E21', ad: 'E21 — Madencilik, Sondaj, Tünel' }
+        ]
+      },
+      {
+        kod: 'F',
+        ad: 'F — Makine Mühendisliği',
+        aciklama: 'Motorlar, Pompalar, Isıtma (Silah/Patlayıcı Harici)',
+        alt_siniflar: [
+          { kod: 'F01', ad: 'F01/F04 — Motorlar, Türbinler, Pompalar' },
+          { kod: 'F21', ad: 'F21/F24 — Aydınlatma, Isıtma, Soğutma' }
+        ]
+      },
+      {
+        kod: 'G',
+        ad: 'G — Fizik',
+        aciklama: 'Ölçüm, Optik, Bilgi İşlem (G06 Yazılım)',
+        alt_siniflar: [
+          { kod: 'G01', ad: 'G01 — Ölçüm, Test, Sensörler' },
+          { kod: 'G02', ad: 'G02 — Optik Sistemler ve Cihazlar' },
+          { kod: 'G06', ad: 'G06 — Bilgi İşlem, Bilgisayar Teknolojisi (Yazılım)' }
+        ]
+      },
+      {
+        kod: 'H',
+        ad: 'H — Elektrik',
+        aciklama: 'Elektrik Mühendisliği, Elektronik, İletişim',
+        alt_siniflar: [
+          { kod: 'H01', ad: 'H01/H02 — Elektrik Elemanları, Enerji İletimi' },
+          { kod: 'H03', ad: 'H03 — Elektronik Devreler ve Yarıiletkenler' },
+          { kod: 'H04', ad: 'H04 — İletişim Teknolojileri, Telekom' }
+        ]
+      }
+    ];
+
+    // PROHIBITED MODERATION CHECK (Silah F41/F42 & Nükleer G21)
+    const KAPSAM_DISI_KODLAR = ['F41', 'F42', 'G21'];
+    const KAPSAM_DISI_KELIMELER = ['silah', 'mühimmat', 'patlayıcı', 'bomba', 'nükleer silah', 'füze', 'harp başlığı'];
+
+    const checkProhibitedModeration = (title, desc, ipcSub) => {
+      const combined = (title + ' ' + desc + ' ' + (ipcSub || '')).toLowerCase();
+      if (ipcSub && KAPSAM_DISI_KODLAR.includes(ipcSub.substring(0, 3))) {
+        return `Kapsam Dışı Sınıf: IPC ${ipcSub} (Silah, Mühimmat veya Nükleer Teknoloji) platform politikası gereği ilan kabul dışıdır.`;
+      }
+      for (let word of KAPSAM_DISI_KELIMELER) {
+        if (combined.includes(word)) {
+          return `Kapsam Dışı İçerik: Metin içerisinde tespit edilen "${word}" kavramı platform politikaları gereği ilan kısıtlamasına tabidir.`;
+        }
+      }
+      return null;
+    };
+
+    // --- DEMO INITIAL DATA ---
+    const INITIAL_USERS = [
+      { id: 'usr_s1', ad: 'Dr. Ahmet Yılmaz', rol: 'satici', sirket_adi: 'Yılmaz AR-GE Danışmanlık', dogrulanmis: true },
+      { id: 'usr_s2', ad: 'Ayşe Kara', rol: 'satici', sirket_adi: 'BiyoKimya İnovasyon Ltd.', dogrulanmis: true },
+      { id: 'usr_a1', ad: 'Mehmet Kaya', rol: 'alici', sirket_adi: 'Vestel Savunma & Otomotiv A.Ş.', dogrulanmis: true },
+      { id: 'usr_a2', ad: 'Selin Demir', rol: 'alici', sirket_adi: 'Anadolu Tarım & Gıda Teknolojileri', dogrulanmis: true },
+      { id: 'usr_admin', ad: 'Sistem Yöneticisi', rol: 'admin', sirket_adi: 'TÜRKPATENT Doğrulama Masası', dogrulanmis: true },
+    ];
+
+    const INITIAL_LISTINGS = [
+      {
+        id: 'pat_001',
+        satici_id: 'usr_s1',
+        satici_ad: 'Dr. Ahmet Yılmaz',
+        satici_sirket: 'Yılmaz AR-GE Danışmanlık',
+        baslik: 'Elektrikli Araçlar İçin Yüksek Verimli Batarya Isı Yönetim Sistemi',
+        patent_no: 'TR 2024/01482 B',
+        sicil_link: 'https://ci.turkpatent.gov.tr/search/TR202401482',
+        sicil_durumu: 'dogrulandi',
+        hak_turu: 'patent',
+        ipc_ana: 'H',
+        ipc_alt: 'H01',
+        kullanim_alani: 'Elektrikli Otomobil Batarya Paketleri, Hızlı Şarj İstasyonları',
+        model_tipi: 'lisans',
+        aciklama: 'Buluş, aşırı şarj ve yüksek hava sıcaklıklarında lithium-ion batarya paketlerinin sıcaklığını 35°C eşiğinde tutan faz değiştiren mikro-kapsüllü soğutma kanalı geometrisi sunmaktadır. Enerji kaybını %18 azaltır.',
+        asgari_beklenti: '750.000 TL + Yıllık %3 Royalti',
+        olusturma_tarihi: '2024-03-15',
+        durum: 'aktif'
+      },
+      {
+        id: 'pat_002',
+        satici_id: 'usr_s2',
+        satici_ad: 'Ayşe Kara',
+        satici_sirket: 'BiyoKimya İnovasyon Ltd.',
+        baslik: 'Otonom Sera İklimlendirme ve Nem Kontrol Sensör Dizi Tescili',
+        patent_no: 'TR 2023/18921 Y',
+        sicil_link: 'https://ci.turkpatent.gov.tr/search/TR202318921',
+        sicil_durumu: 'dogrulandi',
+        hak_turu: 'fayidali_model',
+        ipc_ana: 'A',
+        ipc_alt: 'A01',
+        kullanim_alani: 'Topraksız Tarım, Akıllı Seracılık, Dikey Tarım Tesisleri',
+        model_tipi: 'satis',
+        aciklama: 'Hava akımı ve yaprak yüzeyi nem oranını optik spektroskopi ile eş zamanlı ölçen, bakım gerektirmeyen kablosuz algılayıcı sensör modülü. Faydalı model tescili tamamlanmıştır.',
+        asgari_beklenti: '1.200.000 TL (Tam Devir)',
+        olusturma_tarihi: '2024-01-10',
+        durum: 'aktif'
+      },
+      {
+        id: 'pat_003',
+        satici_id: 'usr_s1',
+        satici_ad: 'Dr. Ahmet Yılmaz',
+        satici_sirket: 'Yılmaz AR-GE Danışmanlık',
+        baslik: 'Nanoteknolojik Su & Yağ Repellent Akıllı Kumaş Kaplama Çözeltisi',
+        patent_no: 'TR 2023/04412 B',
+        sicil_link: 'https://ci.turkpatent.gov.tr/search/TR202304412',
+        sicil_durumu: 'dogrulandi',
+        hak_turu: 'patent',
+        ipc_ana: 'C',
+        ipc_alt: 'C07',
+        kullanim_alani: 'Koruyucu Elbiseler, Lüks Dış Giyim, Teknik Tekstil',
+        model_tipi: 'ortaklik',
+        aciklama: 'Florokarbon içermeyen çevre dostu nano-silika kaplama çözeltisi. Kumaşın nefes alabilirliğini etkilemeden 50 yıkamaya kadar hidrofobik koruma sağlar.',
+        asgari_beklenti: 'Teklif İsteyin',
+        olusturma_tarihi: '2023-11-04',
+        durum: 'aktif'
+      },
+      {
+        id: 'pat_004',
+        satici_id: 'usr_s2',
+        satici_ad: 'Ayşe Kara',
+        satici_sirket: 'BiyoKimya İnovasyon Ltd.',
+        baslik: 'Geri Dönüştürülmüş Polimer Elyaf Dokuma Yöntemi',
+        patent_no: 'TR 2024/03310 Y',
+        sicil_link: 'https://ci.turkpatent.gov.tr/search/TR202403310',
+        sicil_durumu: 'dogrulandi',
+        hak_turu: 'fayidali_model',
+        ipc_ana: 'D',
+        ipc_alt: 'D01',
+        kullanim_alani: 'Sürdürülebilir Tekstil, Otomotiv Döşemesi, Halı Üretimi',
+        model_tipi: 'lisans',
+        aciklama: 'PET atıklarından yüksek mukavemetli mikrofiber iplik elde etme ve mekanik dokuma yöntemi. Karbon ayak izini %42 düşürür.',
+        asgari_beklenti: '500.000 TL Lisans Bedeli',
+        olusturma_tarihi: '2024-02-18',
+        durum: 'aktif'
+      },
+      {
+        id: 'pat_005',
+        satici_id: 'usr_s2',
+        satici_ad: 'Ayşe Kara',
+        satici_sirket: 'BiyoKimya İnovasyon Ltd.',
+        baslik: 'Dikey Eksenli Rüzgar Türbin Kanat Geometrisi Tasarımı',
+        patent_no: 'TR 2024/08819 B',
+        sicil_link: 'https://ci.turkpatent.gov.tr/search/TR202408819',
+        sicil_durumu: 'bekliyor',
+        hak_turu: 'patent',
+        ipc_ana: 'F',
+        ipc_alt: 'F01',
+        kullanim_alani: 'Şehir İçi Binalar, Otoyol Kenarı Rüzgar Enerji Santralleri',
+        model_tipi: 'lisans',
+        aciklama: 'Düşük rüzgar hızlarında (2.5 m/s) kalkış momenti sağlayan asimetrik savoniu-darrieus hibrit kanat profili. TÜRKPATENT inceleme raporu aşamasındadır.',
+        asgari_beklenti: '450.000 TL + %4 Lisans Payı',
+        olusturma_tarihi: '2024-04-02',
+        durum: 'aktif'
+      },
+      {
+        id: 'pat_006',
+        satici_id: 'usr_s1',
+        satici_ad: 'Dr. Ahmet Yılmaz',
+        satici_sirket: 'Yılmaz AR-GE Danışmanlık',
+        baslik: 'Edge-AI Tabanlı Sanayi Kalite Kontrol Kamera Donanım Tasarımı',
+        patent_no: 'TR 2024/09931 Y',
+        sicil_link: 'https://ci.turkpatent.gov.tr/search/TR202409931',
+        sicil_durumu: 'dogrulandi',
+        hak_turu: 'fayidali_model',
+        ipc_ana: 'G',
+        ipc_alt: 'G06',
+        kullanim_alani: 'Üretim Hatları, Seramik ve Metal Çapak Kalite Kontrolü',
+        model_tipi: 'satis',
+        aciklama: 'Milisaniyeler içerisinde hat üstünde ürün hatası tespit eden entegre NPU (Neural Processing Unit) kart mimarisi ve gömülü optik sensör montaj patenti.',
+        asgari_beklenti: '2.500.000 TL (Devir)',
+        olusturma_tarihi: '2024-05-12',
+        durum: 'aktif'
+      },
+      {
+        id: 'pat_007',
+        satici_id: 'usr_s2',
+        satici_ad: 'Ayşe Kara',
+        satici_sirket: 'BiyoKimya İnovasyon Ltd.',
+        baslik: 'Biyo-Bozunur Nişasta Esaslı Gıda Koruyucu Film Formülasyonu',
+        patent_no: 'TR 2023/12204 B',
+        sicil_link: 'https://ci.turkpatent.gov.tr/search/TR202312204',
+        sicil_durumu: 'dogrulandi',
+        hak_turu: 'patent',
+        ipc_ana: 'B',
+        ipc_alt: 'B60',
+        kullanim_alani: 'Taze Meyve/Sebze Paketleme, Organik Gıda Ambalajları',
+        model_tipi: 'ortaklik',
+        aciklama: 'Doğada 90 günde tamamen çözünen, antimikrobiyal kekik yağı katkılı yenilebilir ambalaj filmi. Raf ömrünü 2.5 kat uzatmaktadır.',
+        asgari_beklenti: 'Ortak Üretim Tesisi Kurulumu / Teklif',
+        olusturma_tarihi: '2023-09-18',
+        durum: 'aktif'
+      },
+      {
+        id: 'pat_008',
+        satici_id: 'usr_s1',
+        satici_ad: 'Dr. Ahmet Yılmaz',
+        satici_sirket: 'Yılmaz AR-GE Danışmanlık',
+        baslik: 'Kardiyolojik Erken Teşhis İnovatif Biyo-Sensör Donanımı',
+        patent_no: 'TR 2024/00311 B',
+        sicil_link: 'https://ci.turkpatent.gov.tr/search/TR202400311',
+        sicil_durumu: 'bekliyor',
+        hak_turu: 'patent',
+        ipc_ana: 'A',
+        ipc_alt: 'A61',
+        kullanim_alani: 'Giyilebilir Sağlık Cihazları, Acil Servis Monitorizasyonu',
+        model_tipi: 'lisans',
+        aciklama: 'Cilt üstünden kesintisiz troponin proteini takibi yapan mikro-iğne dizilimli elektro-kimyasal patenti. Ön klinik verileri mevcuttur.',
+        asgari_beklenti: '1.800.000 TL Lisans Bedeli',
+        olusturma_tarihi: '2024-06-01',
+        durum: 'aktif'
+      },
+      {
+        id: 'pat_009',
+        satici_id: 'usr_s2',
+        satici_ad: 'Ayşe Kara',
+        satici_sirket: 'BiyoKimya İnovasyon Ltd.',
+        baslik: 'Depreme Dayanıklı Hafif Polimerik Beton Bileşimi ve Üretim Yöntemi',
+        patent_no: 'TR 2022/19082 B',
+        sicil_link: 'https://ci.turkpatent.gov.tr/search/TR202219082',
+        sicil_durumu: 'dogrulandi',
+        hak_turu: 'patent',
+        ipc_ana: 'E',
+        ipc_alt: 'E04',
+        kullanim_alani: 'Prefabrik Yapı Elemanları, Bölme Duvar Panelleri',
+        model_tipi: 'satis',
+        aciklama: 'Geleneksel betona göre %40 daha hafif, esneklik katsayısı (elastic modulus) 2.2 kat yüksek geri dönüştürülmüş plastik polimer katkılı patent tescili.',
+        asgari_beklenti: '3.000.000 TL (Tam Devir)',
+        olusturma_tarihi: '2022-12-14',
+        durum: 'aktif'
+      }
+    ];
+
+    const INITIAL_INTERESTS = [
+      {
+        id: 'int_001',
+        ilan_id: 'pat_001',
+        alici_id: 'usr_a1',
+        alici_ad: 'Mehmet Kaya',
+        alici_sirket: 'Vestel Savunma & Otomotiv A.Ş.',
+        durum: 'olgunlasti',
+        olusturma_tarihi: '2024-07-20 10:30'
+      },
+      {
+        id: 'int_002',
+        ilan_id: 'pat_002',
+        alici_id: 'usr_a2',
+        alici_ad: 'Selin Demir',
+        alici_sirket: 'Anadolu Tarım & Gıda Teknolojileri',
+        durum: 'gorusuluyor',
+        olusturma_tarihi: '2024-07-22 14:15'
+      }
+    ];
+
+    const INITIAL_MESSAGES = [
+      {
+        id: 'msg_001',
+        ilgi_id: 'int_001',
+        gonderen_id: 'usr_a1',
+        gonderen_ad: 'Mehmet Kaya',
+        icerik: 'Merhaba Ahmet Bey, Elektrikli araç batarya ısı yönetim patentinizle ilgili teknik detayları ve lisanslama şartlarını görüşmek istiyoruz.',
+        tarih: '2024-07-20 10:30'
+      },
+      {
+        id: 'msg_002',
+        ilgi_id: 'int_001',
+        gonderen_id: 'usr_s1',
+        gonderen_ad: 'Dr. Ahmet Yılmaz',
+        icerik: 'Merhaba Mehmet Bey, ilginiz için teşekkürler. Test sonuçlarımız ve TÜRKPATENT sicil raporumuz mevcuttur.',
+        tarih: '2024-07-20 11:45'
+      },
+      {
+        id: 'msg_003',
+        ilgi_id: 'int_001',
+        gonderen_id: 'usr_a1',
+        gonderen_ad: 'Mehmet Kaya',
+        icerik: 'Yönetim kurulumuz lisans teklifinizi onayladı. Devir ve lisans işlemleri için noter devir protokolü taslağını hazırlayabiliriz.',
+        tarih: '2024-07-23 16:00'
+      }
+    ];
+
+    // --- MAIN APP COMPONENT ---
+    function App() {
+      // Persistence state initialization
+      const [users, setUsers] = useState(() => {
+        const local = localStorage.getItem('pp_users_v2');
+        return local ? JSON.parse(local) : INITIAL_USERS;
+      });
+
+      const [listings, setListings] = useState(() => {
+        const local = localStorage.getItem('pp_listings_v2');
+        return local ? JSON.parse(local) : INITIAL_LISTINGS;
+      });
+
+      const [interests, setInterests] = useState(() => {
+        const local = localStorage.getItem('pp_interests_v2');
+        return local ? JSON.parse(local) : INITIAL_INTERESTS;
+      });
+
+      const [messages, setMessages] = useState(() => {
+        const local = localStorage.getItem('pp_messages_v2');
+        return local ? JSON.parse(local) : INITIAL_MESSAGES;
+      });
+
+      // App state
+      const [currentUser, setCurrentUser] = useState(users[0]);
+      const [activeTab, setActiveTab] = useState('home'); // home | listings | create | dashboard | admin | guide
+      
+      // Filters
+      const [selectedIpcSection, setSelectedIpcSection] = useState('');
+      const [selectedIpcSub, setSelectedIpcSub] = useState('');
+      const [selectedHakTuru, setSelectedHakTuru] = useState('');
+      const [selectedModel, setSelectedModel] = useState('');
+      const [selectedVerification, setSelectedVerification] = useState('');
+      const [searchQuery, setSearchQuery] = useState('');
+
+      // Create Form moderation error state
+      const [formModerationError, setFormModerationError] = useState(null);
+
+      // Selected Modal states
+      const [selectedListingDetail, setSelectedListingDetail] = useState(null);
+      const [activeChatInterestId, setActiveChatInterestId] = useState(null);
+      const [showInterestModal, setShowInterestModal] = useState(false);
+      const [interestMessageText, setInterestMessageText] = useState('');
+
+      // Save to localStorage
+      useEffect(() => {
+        localStorage.setItem('pp_users_v2', JSON.stringify(users));
+        localStorage.setItem('pp_listings_v2', JSON.stringify(listings));
+        localStorage.setItem('pp_interests_v2', JSON.stringify(interests));
+        localStorage.setItem('pp_messages_v2', JSON.stringify(messages));
+      }, [users, listings, interests, messages]);
+
+      // Reset handler
+      const handleResetData = () => {
+        if (confirm('Tüm demo verileri varsayılan duruma getirilsin mi?')) {
+          localStorage.removeItem('pp_users_v2');
+          localStorage.removeItem('pp_listings_v2');
+          localStorage.removeItem('pp_interests_v2');
+          localStorage.removeItem('pp_messages_v2');
+          setUsers(INITIAL_USERS);
+          setListings(INITIAL_LISTINGS);
+          setInterests(INITIAL_INTERESTS);
+          setMessages(INITIAL_MESSAGES);
+          setCurrentUser(INITIAL_USERS[0]);
+          alert('Tüm IPC ve Sınai Mülkiyet kategorili veriler sıfırlandı.');
+        }
+      };
+
+      // Filtered Listings logic
+      const filteredListings = useMemo(() => {
+        return listings.filter(l => {
+          if (selectedIpcSection && l.ipc_ana !== selectedIpcSection) return false;
+          if (selectedIpcSub && l.ipc_alt !== selectedIpcSub) return false;
+          if (selectedHakTuru && l.hak_turu !== selectedHakTuru) return false;
+          if (selectedModel && l.model_tipi !== selectedModel) return false;
+          if (selectedVerification === 'dogrulandi' && l.sicil_durumu !== 'dogrulandi') return false;
+          if (selectedVerification === 'bekliyor' && l.sicil_durumu !== 'bekliyor') return false;
+          if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            return (
+              l.baslik.toLowerCase().includes(q) ||
+              l.patent_no.toLowerCase().includes(q) ||
+              l.aciklama.toLowerCase().includes(q) ||
+              (l.kullanim_alani && l.kullanim_alani.toLowerCase().includes(q))
+            );
+          }
+          return true;
+        });
+      }, [listings, selectedIpcSection, selectedIpcSub, selectedHakTuru, selectedModel, selectedVerification, searchQuery]);
+
+      // Subclasses available for selected IPC section
+      const currentSubclasses = useMemo(() => {
+        if (!selectedIpcSection) return [];
+        const sec = IPC_SEKTORLERI.find(s => s.kod === selectedIpcSection);
+        return sec ? sec.alt_siniflar : [];
+      }, [selectedIpcSection]);
+
+      // Create new Listing Handler with Moderation Check
+      const handleCreateListingSubmit = (e) => {
+        e.preventDefault();
+        setFormModerationError(null);
+
+        const formData = new FormData(e.target);
+        const baslik = formData.get('baslik');
+        const aciklama = formData.get('aciklama');
+        const ipc_alt = formData.get('ipc_alt');
+
+        // Check moderation policy
+        const moderationIssue = checkProhibitedModeration(baslik, aciklama, ipc_alt);
+        if (moderationIssue) {
+          setFormModerationError(moderationIssue);
+          return;
+        }
+
+        const created = {
+          id: 'pat_' + Date.now(),
+          satici_id: currentUser.id,
+          satici_ad: currentUser.ad,
+          satici_sirket: currentUser.sirket_adi,
+          baslik: baslik,
+          patent_no: formData.get('patent_no'),
+          sicil_link: formData.get('sicil_link'),
+          hak_turu: formData.get('hak_turu'),
+          ipc_ana: formData.get('ipc_ana'),
+          ipc_alt: ipc_alt,
+          kullanim_alani: formData.get('kullanim_alani'),
+          model_tipi: formData.get('model_tipi'),
+          asgari_beklenti: formData.get('asgari_beklenti') || 'Teklif İsteyin',
+          aciklama: aciklama,
+          sicil_durumu: 'bekliyor',
+          olusturma_tarihi: new Date().toISOString().split('T')[0],
+          durum: 'aktif'
+        };
+
+        setListings([created, ...listings]);
+        setActiveTab('dashboard');
+        alert('İlanınız başarıyla oluşturuldu! TÜRKPATENT sicil ve IPC doğrulama incelemesine alındı.');
+      };
+
+      // Send Interest Handler
+      const handleSendInterest = () => {
+        if (!selectedListingDetail) return;
+        
+        const existing = interests.find(i => i.ilan_id === selectedListingDetail.id && i.alici_id === currentUser.id);
+        let interestId = existing ? existing.id : null;
+
+        if (!existing) {
+          const newInterest = {
+            id: 'int_' + Date.now(),
+            ilan_id: selectedListingDetail.id,
+            alici_id: currentUser.id,
+            alici_ad: currentUser.ad,
+            alici_sirket: currentUser.sirket_adi,
+            durum: 'yeni',
+            olusturma_tarihi: new Date().toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })
+          };
+          setInterests([newInterest, ...interests]);
+          interestId = newInterest.id;
+        }
+
+        if (interestMessageText.trim()) {
+          const newMsg = {
+            id: 'msg_' + Date.now(),
+            ilgi_id: interestId,
+            gonderen_id: currentUser.id,
+            gonderen_ad: currentUser.ad,
+            icerik: interestMessageText,
+            tarih: new Date().toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })
+          };
+          setMessages(prev => [...prev, newMsg]);
+        }
+
+        setShowInterestModal(false);
+        setInterestMessageText('');
+        setSelectedListingDetail(null);
+        setActiveTab('dashboard');
+        setActiveChatInterestId(interestId);
+      };
+
+      // Admin Toggle Verification
+      const handleToggleVerification = (listingId) => {
+        setListings(listings.map(l => {
+          if (l.id === listingId) {
+            const nextStatus = l.sicil_durumu === 'dogrulandi' ? 'bekliyor' : 'dogrulandi';
+            return { ...l, sicil_durumu: nextStatus };
+          }
+          return l;
+        }));
+      };
+
+      // Update Interest Status
+      const handleUpdateInterestStatus = (interestId, newStatus) => {
+        setInterests(interests.map(i => i.id === interestId ? { ...i, durum: newStatus } : i));
+      };
+
+      // Chat send
+      const handleSendChatMessage = (interestId, text) => {
+        if (!text.trim()) return;
+        const newMsg = {
+          id: 'msg_' + Date.now(),
+          ilgi_id: interestId,
+          gonderen_id: currentUser.id,
+          gonderen_ad: currentUser.ad,
+          icerik: text,
+          tarih: new Date().toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })
+        };
+        setMessages([...messages, newMsg]);
+      };
+
+      return (
+        <div className="min-h-screen flex flex-col justify-between">
+          
+          {/* TOP DEMO ROLE SWITCHER BAR */}
+          <div className="bg-slate-900 text-slate-300 text-xs px-4 py-2 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center space-x-2">
+              <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="font-semibold text-white">Patent Pazarı Demo (IPC & Hak Türü Katmanlı):</span>
+              <span className="text-slate-400 hidden sm:inline">Rolünüzü üst bardan anında değiştirebilirsiniz.</span>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <span className="text-slate-400">Aktif Rol:</span>
+              <div className="inline-flex rounded-md shadow-sm bg-slate-800 p-0.5 border border-slate-700">
+                {users.map(u => (
+                  <button
+                    key={u.id}
+                    onClick={() => setCurrentUser(u)}
+                    className={`px-2.5 py-1 text-xs font-medium rounded ${
+                      currentUser.id === u.id
+                        ? 'bg-brand-600 text-white shadow'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                    }`}
+                  >
+                    {u.ad} ({u.rol === 'satici' ? 'Satıcı' : u.rol === 'alici' ? 'Alıcı' : 'Admin'})
+                  </button>
+                ))}
+              </div>
+              <button 
+                onClick={handleResetData} 
+                title="Demo Veriyi Sıfırla"
+                className="ml-2 text-slate-400 hover:text-amber-400 p-1 flex items-center gap-1"
+              >
+                <Icon name="refresh" className="w-3.5 h-3.5" />
+                <span className="hidden md:inline">Sıfırla</span>
+              </button>
+            </div>
+          </div>
+
+          {/* MAIN NAVBAR */}
+          <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+              
+              {/* BRAND LOGO */}
+              <div 
+                onClick={() => setActiveTab('home')}
+                className="flex items-center space-x-3 cursor-pointer group"
+              >
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-slate-900 to-brand-700 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform">
+                  <Icon name="scale" className="w-6 h-6" />
+                </div>
+                <div>
+                  <span className="font-display text-xl font-bold tracking-tight text-slate-900 group-hover:text-brand-600 transition-colors">
+                    PATENT<span className="text-brand-600">PAZARI</span>
+                  </span>
+                  <span className="block text-[10px] text-slate-500 font-medium tracking-wider uppercase">
+                    IPC & SMK 6769 Sınai Mülkiyet Pazarı
+                  </span>
+                </div>
+              </div>
+
+              {/* NAVIGATION TABS */}
+              <nav className="hidden md:flex items-center space-x-1">
+                <button
+                  onClick={() => setActiveTab('home')}
+                  className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    activeTab === 'home' ? 'text-brand-600 bg-brand-50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  Ana Sayfa
+                </button>
+                <button
+                  onClick={() => setActiveTab('listings')}
+                  className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    activeTab === 'listings' ? 'text-brand-600 bg-brand-50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  IPC İlan Pazarı ({listings.length})
+                </button>
+
+                {currentUser.rol === 'satici' && (
+                  <button
+                    onClick={() => setActiveTab('create')}
+                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center space-x-1.5 ${
+                      activeTab === 'create' ? 'text-brand-600 bg-brand-50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Icon name="plus" className="w-4 h-4" />
+                    <span>İlan Oluştur</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={() => setActiveTab('dashboard')}
+                  className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center space-x-1.5 ${
+                    activeTab === 'dashboard' ? 'text-brand-600 bg-brand-50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <Icon name="user" className="w-4 h-4" />
+                  <span>Panelim</span>
+                  {interests.length > 0 && (
+                    <span className="bg-brand-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                      {interests.length}
+                    </span>
+                  )}
+                </button>
+
+                {currentUser.rol === 'admin' && (
+                  <button
+                    onClick={() => setActiveTab('admin')}
+                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center space-x-1.5 ${
+                      activeTab === 'admin' ? 'text-amber-700 bg-amber-50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Icon name="shieldCheck" className="w-4 h-4 text-amber-600" />
+                    <span>Sicil & Moderasyon</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={() => setActiveTab('guide')}
+                  className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    activeTab === 'guide' ? 'text-brand-600 bg-brand-50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  Hukuki Rehber
+                </button>
+              </nav>
+
+              {/* USER PROFILE CARD */}
+              <div className="flex items-center space-x-3 border-l border-slate-200 pl-4">
+                <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-300 flex items-center justify-center text-slate-700 font-bold text-sm">
+                  {currentUser.ad.charAt(0)}
+                </div>
+                <div className="hidden lg:block text-left text-xs">
+                  <div className="font-semibold text-slate-900">{currentUser.ad}</div>
+                  <div className="text-slate-500">{currentUser.sirket_adi}</div>
+                </div>
+              </div>
+
+            </div>
+          </header>
+
+          {/* MAIN CONTENT AREA */}
+          <main className="flex-1">
+
+            {/* --- SCREEN 1: ANA SAYFA (HERO & OVERVIEW) --- */}
+            {activeTab === 'home' && (
+              <div>
+                {/* HERO SECTION */}
+                <section className="bg-slate-900 text-white pt-14 pb-16 relative overflow-hidden">
+                  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                    <div className="grid lg:grid-cols-12 gap-10 items-center">
+                      <div className="lg:col-span-7 space-y-5">
+                        <div className="inline-flex items-center space-x-2 bg-slate-800 border border-slate-700 rounded-full px-3 py-1 text-xs font-medium text-brand-400">
+                          <Icon name="shieldCheck" className="w-4 h-4 text-emerald-400" />
+                          <span>IPC Uluslararası Patent Sınıflandırması & SMK 6769 Uyumlu</span>
+                        </div>
+
+                        <h1 className="font-display text-4xl sm:text-5xl font-extrabold tracking-tight leading-tight">
+                          Sınai Mülkiyet ve IPC Teknik <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-teal-300">Sektör Pazarı</span>
+                        </h1>
+
+                        <p className="text-slate-300 text-base leading-relaxed">
+                          Patent, faydalı model ve marka haklarınızı 8 ana IPC bölümünde sanayi ve yatırımcılarla buluşturun. Hukuki hak türü ve teknik sektör katmanıyla tam uyumlu eşleştirme.
+                        </p>
+
+                        {/* SEARCH */}
+                        <div className="pt-2 flex flex-col sm:flex-row gap-3">
+                          <div className="relative flex-1">
+                            <input
+                              type="text"
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              placeholder="IPC kodu (A, G06), patent adı veya anahtar kelime..."
+                              className="w-full pl-10 pr-4 py-3 rounded-xl text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-lg"
+                            />
+                            <Icon name="search" className="w-5 h-5 absolute left-3 top-3.5 text-slate-400" />
+                          </div>
+                          <button
+                            onClick={() => setActiveTab('listings')}
+                            className="bg-brand-600 hover:bg-brand-700 text-white font-semibold px-6 py-3 rounded-xl shadow-lg transition-colors flex items-center justify-center space-x-2"
+                          >
+                            <span>İlanları İncele</span>
+                            <Icon name="chevronRight" className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* HERO RIGHT CARD */}
+                      <div className="lg:col-span-5 hidden lg:block">
+                        <div className="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-6 shadow-2xl space-y-4">
+                          <div className="flex items-center justify-between">
+                            <span className="bg-emerald-500/20 text-emerald-300 text-xs font-semibold px-2.5 py-1 rounded border border-emerald-500/30 flex items-center gap-1">
+                              <Icon name="shieldCheck" className="w-3.5 h-3.5" />
+                              TÜRKPATENT Doğrulandı
+                            </span>
+                            <span className="text-xs font-mono text-slate-400">TR 2024/01482 B</span>
+                          </div>
+
+                          <h3 className="font-display font-bold text-base text-white">
+                            Elektrikli Araçlar İçin Yüksek Verimli Batarya Isı Yönetim Sistemi
+                          </h3>
+
+                          <div className="text-xs text-slate-300 flex flex-wrap gap-2">
+                            <span className="bg-slate-700 px-2 py-0.5 rounded text-brand-300 font-semibold">Katman 1: Patent</span>
+                            <span className="bg-slate-700 px-2 py-0.5 rounded text-emerald-300 font-semibold">Katman 2: IPC H (Elektrik)</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* KATMAN 2: IPC SEKTÖR SEÇİCİ GRID */}
+                <section className="py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h2 className="font-display text-2xl font-bold text-slate-900">IPC Teknik Sektör Bölümleri (Katman 2)</h2>
+                      <p className="text-slate-500 text-xs mt-0.5">Uluslararası Patent Sınıflandırması (IPC 8 Ana Bölüm)</p>
+                    </div>
+                    <button
+                      onClick={() => setActiveTab('listings')}
+                      className="text-brand-600 hover:text-brand-700 font-semibold text-xs flex items-center gap-1"
+                    >
+                      Tüm IPC İlanları ({listings.length}) &rarr;
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {IPC_SEKTORLERI.map(ipc => {
+                      const count = listings.filter(l => l.ipc_ana === ipc.kod).length;
+                      return (
+                        <div
+                          key={ipc.kod}
+                          onClick={() => {
+                            setSelectedIpcSection(ipc.kod);
+                            setSelectedIpcSub('');
+                            setActiveTab('listings');
+                          }}
+                          className="bg-white p-4 rounded-xl border border-slate-200 hover:border-brand-500 hover:shadow-md cursor-pointer transition-all space-y-2 group"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="w-8 h-8 rounded-lg bg-brand-50 group-hover:bg-brand-600 group-hover:text-white text-brand-700 font-bold flex items-center justify-center text-sm transition-colors">
+                              {ipc.kod}
+                            </span>
+                            <span className="text-xs font-semibold text-slate-400 group-hover:text-brand-600">
+                              {count} İlan
+                            </span>
+                          </div>
+
+                          <div>
+                            <h4 className="font-semibold text-slate-900 text-sm group-hover:text-brand-600 transition-colors">{ipc.ad}</h4>
+                            <p className="text-xs text-slate-500 mt-1">{ipc.aciklama}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                {/* MODERATION POLICY BANNER */}
+                <section className="bg-slate-100 border-t border-b border-slate-200 py-8">
+                  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center space-x-3 text-slate-800">
+                      <Icon name="ban" className="w-6 h-6 text-amber-600 flex-shrink-0" />
+                      <div className="text-xs">
+                        <span className="font-bold text-slate-900 block">Kapsam Dışı Moderasyon Politikası:</span>
+                        <span>Platform ilkesi gereği Silah, Mühimmat, Patlayıcılar (IPC F41, F42) ve Nükleer Silah/Malzeme (G21) teknolojileri ilan kabul kapsamı dışındadır.</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setActiveTab('guide')}
+                      className="text-xs font-semibold bg-white border border-slate-300 px-4 py-2 rounded-lg hover:bg-slate-50 text-slate-700"
+                    >
+                      Politika Detayları
+                    </button>
+                  </div>
+                </section>
+              </div>
+            )}
+
+            {/* --- SCREEN 2: İLAN LİSTESİ (ALICI / PAZAR GÖRÜNÜMÜ - KATMAN 2 ÖNCELİKLİ) --- */}
+            {activeTab === 'listings' && (
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+                
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+                  <div>
+                    <h1 className="font-display text-2xl font-bold text-slate-900">IPC Sınai Mülkiyet Pazarı</h1>
+                    <p className="text-slate-500 text-xs mt-0.5">
+                      Uluslararası Patent Sınıflandırması (Katman 2) ve Hak Türü (Katman 1) bazlı arama
+                    </p>
+                  </div>
+                </div>
+
+                {/* FILTERS TOOLBAR */}
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                  
+                  {/* KATMAN 2: IPC MAIN SECTION TABS / SELECT */}
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                      Katman 2: IPC Ana Teknik Sektör Filtresi
+                    </label>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button
+                        onClick={() => { setSelectedIpcSection(''); setSelectedIpcSub(''); }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                          selectedIpcSection === '' ? 'bg-brand-600 text-white shadow' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        }`}
+                      >
+                        Tüm Sektörler
+                      </button>
+                      {IPC_SEKTORLERI.map(sec => (
+                        <button
+                          key={sec.kod}
+                          onClick={() => { setSelectedIpcSection(sec.kod); setSelectedIpcSub(''); }}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                            selectedIpcSection === sec.kod ? 'bg-brand-600 text-white shadow' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          }`}
+                        >
+                          {sec.kod} — {sec.ad.split('—')[1] || sec.ad}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* SECONDARY DETAILED FILTERS ROW */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t border-slate-100">
+                    
+                    {/* IPC Sub-class filter */}
+                    <select
+                      value={selectedIpcSub}
+                      onChange={(e) => setSelectedIpcSub(e.target.value)}
+                      disabled={!selectedIpcSection}
+                      className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
+                    >
+                      <option value="">IPC Alt Sınıf (Tümü)</option>
+                      {currentSubclasses.map(sub => (
+                        <option key={sub.kod} value={sub.kod}>{sub.ad}</option>
+                      ))}
+                    </select>
+
+                    {/* Katman 1: Hak Türü filter */}
+                    <select
+                      value={selectedHakTuru}
+                      onChange={(e) => setSelectedHakTuru(e.target.value)}
+                      className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 focus:ring-2 focus:ring-brand-500"
+                    >
+                      <option value="">Katman 1: Hak Türü (Tümü)</option>
+                      {HAK_TURULERI.map(h => (
+                        <option key={h.id} value={h.id}>{h.ad}</option>
+                      ))}
+                    </select>
+
+                    {/* Model Type */}
+                    <select
+                      value={selectedModel}
+                      onChange={(e) => setSelectedModel(e.target.value)}
+                      className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 focus:ring-2 focus:ring-brand-500"
+                    >
+                      <option value="">Eşleştirme Modeli (Tümü)</option>
+                      <option value="satis">Devir (Satış)</option>
+                      <option value="lisans">Lisanslama</option>
+                      <option value="ortaklik">Ortaklık / Üretim</option>
+                    </select>
+
+                    {/* Verification Filter */}
+                    <select
+                      value={selectedVerification}
+                      onChange={(e) => setSelectedVerification(e.target.value)}
+                      className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 focus:ring-2 focus:ring-brand-500"
+                    >
+                      <option value="">TÜRKPATENT Sicil Durumu</option>
+                      <option value="dogrulandi">Doğrulanmış İlanlar</option>
+                      <option value="bekliyor">İncelemedeki İlanlar</option>
+                    </select>
+                  </div>
+
+                  {(selectedIpcSection || selectedIpcSub || selectedHakTuru || selectedModel || selectedVerification || searchQuery) && (
+                    <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100 text-slate-500">
+                      <span>{filteredListings.length} ilan filtrelendi</span>
+                      <button
+                        onClick={() => {
+                          setSelectedIpcSection('');
+                          setSelectedIpcSub('');
+                          setSelectedHakTuru('');
+                          setSelectedModel('');
+                          setSelectedVerification('');
+                          setSearchQuery('');
+                        }}
+                        className="text-brand-600 hover:underline font-medium"
+                      >
+                        Tüm Filtreleri Temizle
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* LISTINGS GRID */}
+                {filteredListings.length === 0 ? (
+                  <div className="bg-white rounded-xl border border-slate-200 p-12 text-center space-y-3">
+                    <Icon name="alertTriangle" className="w-10 h-10 text-amber-500 mx-auto" />
+                    <h3 className="font-semibold text-slate-800">Seçilen Filtrelerde İlan Bulunamadı</h3>
+                    <p className="text-slate-500 text-xs">Filtrelerinizi esneterek tekrar arayabilirsiniz.</p>
+                  </div>
+                ) : (
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredListings.map(listing => {
+                      const hakObj = HAK_TURULERI.find(h => h.id === listing.hak_turu);
+                      const ipcSecObj = IPC_SEKTORLERI.find(i => i.kod === listing.ipc_ana);
+
+                      return (
+                        <div
+                          key={listing.id}
+                          className="bg-white rounded-xl border border-slate-200 hover:border-brand-500/50 shadow-sm hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group"
+                        >
+                          <div className="p-5 space-y-3">
+                            
+                            {/* CATEGORY TAGS */}
+                            <div className="flex flex-wrap items-center justify-between gap-1.5">
+                              <span className="bg-brand-50 text-brand-700 text-[10px] font-bold px-2 py-0.5 rounded border border-brand-200">
+                                Katman 2: IPC {listing.ipc_alt || listing.ipc_ana}
+                              </span>
+
+                              {listing.sicil_durumu === 'dogrulandi' ? (
+                                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
+                                  <Icon name="shieldCheck" className="w-3 h-3 text-emerald-600" />
+                                  Doğrulandı
+                                </span>
+                              ) : (
+                                <span className="bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-medium px-2 py-0.5 rounded">
+                                  İncelemede
+                                </span>
+                              )}
+                            </div>
+
+                            {/* TITLE & PATENT NO */}
+                            <div>
+                              <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono mb-1">
+                                <span>{listing.patent_no}</span>
+                                <span className="font-sans font-medium text-slate-500">{hakObj ? hakObj.ad.split('(')[0] : listing.hak_turu}</span>
+                              </div>
+                              <h3 
+                                onClick={() => setSelectedListingDetail(listing)}
+                                className="font-display font-bold text-slate-900 text-base line-clamp-2 group-hover:text-brand-600 cursor-pointer transition-colors"
+                              >
+                                {listing.baslik}
+                              </h3>
+                            </div>
+
+                            <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed">
+                              {listing.aciklama}
+                            </p>
+
+                            <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2 text-[11px]">
+                              <div>
+                                <span className="text-slate-400 block">Model Tipi:</span>
+                                <span className="font-semibold text-slate-800 capitalize">
+                                  {listing.model_tipi === 'satis' ? 'Devir (Satış)' : listing.model_tipi}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 block">Asgari Beklenti:</span>
+                                <span className="font-semibold text-brand-700 truncate block">
+                                  {listing.asgari_beklenti || 'Teklif İsteyin'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="bg-slate-50 px-5 py-3 border-t border-slate-100 flex items-center justify-between">
+                            <span className="text-[11px] text-slate-500 truncate max-w-[180px]">
+                              {listing.satici_sirket}
+                            </span>
+                            
+                            <button
+                              onClick={() => setSelectedListingDetail(listing)}
+                              className="text-xs font-semibold text-brand-600 hover:text-brand-700 flex items-center gap-1"
+                            >
+                              <span>Detaylar</span>
+                              <Icon name="chevronRight" className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* --- SCREEN 3: İLAN OLUŞTUR (SATICI GÖRÜNÜMÜ - KATMAN 1 & 2 DAHİL) --- */}
+            {activeTab === 'create' && (
+              <div className="max-w-3xl mx-auto px-4 py-10">
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-md p-6 sm:p-8 space-y-6">
+                  
+                  <div className="border-b border-slate-200 pb-4">
+                    <h1 className="font-display text-2xl font-bold text-slate-900">İki Katmanlı İlan Oluştur</h1>
+                    <p className="text-slate-500 text-xs mt-1">
+                      SMK 6769 Sınai Mülkiyet Hak Türü (Katman 1) ve IPC Teknik Sektör (Katman 2) zorunludur.
+                    </p>
+                  </div>
+
+                  {/* MODERATION ERROR ALERT */}
+                  {formModerationError && (
+                    <div className="bg-red-50 border-2 border-red-300 rounded-xl p-4 flex gap-3 text-red-900 animate-bounce">
+                      <Icon name="ban" className="w-6 h-6 text-red-600 flex-shrink-0" />
+                      <div className="text-xs space-y-1">
+                        <span className="font-bold block text-sm">İlan Kabul Engeli (Moderasyon Reddi):</span>
+                        <p>{formModerationError}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleCreateListingSubmit} className="space-y-4 text-xs">
+                    
+                    {/* KATMAN 1: SINAI MULKIYET HAK TURU (ZORUNLU) */}
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                      <label className="block font-bold text-slate-900 text-xs">
+                        1. KATMAN: Sınai Mülkiyet Hakkı Türü (SMK 6769) *
+                      </label>
+                      <select
+                        name="hak_turu"
+                        required
+                        className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-xs font-semibold text-brand-900 bg-white focus:ring-2 focus:ring-brand-500"
+                      >
+                        <option value="">Hak Türünü Seçiniz...</option>
+                        {HAK_TURULERI.map(h => (
+                          <option key={h.id} value={h.id}>
+                            {h.ad} — {h.aciklama}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* KATMAN 2: IPC TEKNIK SEKTOR & ALT SINIF (ZORUNLU) */}
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                      <label className="block font-bold text-slate-900 text-xs">
+                        2. KATMAN: IPC Uluslararası Patent Sınıfı *
+                      </label>
+
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-slate-700 font-semibold mb-1">IPC Ana Bölüm *</label>
+                          <select
+                            name="ipc_ana"
+                            required
+                            onChange={(e) => {
+                              setSelectedIpcSection(e.target.value);
+                              setSelectedIpcSub('');
+                            }}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-brand-500"
+                          >
+                            <option value="">IPC Ana Bölümü Seçin</option>
+                            {IPC_SEKTORLERI.map(sec => (
+                              <option key={sec.kod} value={sec.kod}>{sec.ad}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-slate-700 font-semibold mb-1">IPC 2. Seviye Alt Sınıf</label>
+                          <select
+                            name="ipc_alt"
+                            value={selectedIpcSub}
+                            onChange={(e) => setSelectedIpcSub(e.target.value)}
+                            disabled={!selectedIpcSection}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
+                          >
+                            <option value="">Alt Sınıf Seçiniz (İsteğe Bağlı)</option>
+                            {currentSubclasses.map(sub => (
+                              <option key={sub.kod} value={sub.kod}>{sub.ad}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* BASLIK */}
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">
+                        Buluş / İlan Başlığı *
+                      </label>
+                      <input
+                        type="text"
+                        name="baslik"
+                        required
+                        placeholder="Örn: Elektrikli Araçlar İçin Isı Yönetim Sistemi"
+                        className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-brand-500"
+                      />
+                    </div>
+
+                    {/* PATENT NO & SICIL LINK */}
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">
+                          TÜRKPATENT Sicil / Tescil No *
+                        </label>
+                        <input
+                          type="text"
+                          name="patent_no"
+                          required
+                          placeholder="Örn: TR 2024/01482 B"
+                          className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-brand-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">
+                          TÜRKPATENT Sicil Linki (Opsiyonel)
+                        </label>
+                        <input
+                          type="url"
+                          name="sicil_link"
+                          placeholder="https://ci.turkpatent.gov.tr/..."
+                          className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-brand-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* MODEL & BEKLENTI */}
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">
+                          Eşleştirme Modeli *
+                        </label>
+                        <select
+                          name="model_tipi"
+                          required
+                          className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-brand-500"
+                        >
+                          <option value="satis">Devir (Tam Satış)</option>
+                          <option value="lisans">Lisanslama (Royalty)</option>
+                          <option value="ortaklik">Ortak Üretim / Yatırım</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">
+                          Asgari Beklenti
+                        </label>
+                        <input
+                          type="text"
+                          name="asgari_beklenti"
+                          placeholder="Örn: 750.000 TL Veya Teklif İsteyin"
+                          className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-brand-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* KULLANIM ALANI & ACIKLAMA */}
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">
+                        Kullanım Alanı
+                      </label>
+                      <input
+                        type="text"
+                        name="kullanim_alani"
+                        placeholder="Örn: Otomobil bataryaları, Şarj üniteleri"
+                        className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-brand-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">
+                        Açıklama ve Teknik Detaylar *
+                      </label>
+                      <textarea
+                        name="aciklama"
+                        required
+                        rows="4"
+                        placeholder="Buluşun yenilikçi yönleri ve teknik verileri..."
+                        className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-brand-500"
+                      ></textarea>
+                    </div>
+
+                    {/* LEGAL DISCLAIMER */}
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 text-amber-900">
+                      <Icon name="alertTriangle" className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <div className="text-[11px] leading-relaxed">
+                        <span className="font-bold">Yasal Bilgilendirme:</span> Bu platform eşleştirme hizmetidir; hukuki danışmanlık veya noterlik sunmaz. İlanınız TÜRKPATENT sicil ve IPC moderasyon süzgecinden geçirilir.
+                      </div>
+                    </div>
+
+                    <div className="pt-2 flex justify-end space-x-3">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('listings')}
+                        className="px-5 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50"
+                      >
+                        İptal
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-lg shadow"
+                      >
+                        İlanı Gönder & Moderasyona Sun
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* --- SCREEN 4: PANELİM (MESSAGING & STATUS) --- */}
+            {activeTab === 'dashboard' && (
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+                
+                <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                  <div>
+                    <h1 className="font-display text-2xl font-bold text-slate-900">Kullanıcı Kontrol Paneli</h1>
+                    <p className="text-slate-500 text-xs mt-0.5">
+                      Giriş Yapılan Rol: <span className="font-semibold text-brand-700">{currentUser.ad} ({currentUser.sirket_adi})</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid lg:grid-cols-12 gap-8">
+                  
+                  {/* LEFT: MY LISTINGS & INTERESTS */}
+                  <div className="lg:col-span-5 space-y-6">
+                    
+                    {currentUser.rol === 'satici' && (
+                      <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
+                        <h3 className="font-display font-bold text-slate-900 text-base border-b border-slate-100 pb-3 flex items-center justify-between">
+                          <span>İlanlarım</span>
+                          <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">
+                            {listings.filter(l => l.satici_id === currentUser.id).length}
+                          </span>
+                        </h3>
+
+                        <div className="space-y-3">
+                          {listings.filter(l => l.satici_id === currentUser.id).map(listing => (
+                            <div key={listing.id} className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="font-mono text-[10px] text-slate-500">{listing.patent_no}</span>
+                                <span className="text-[10px] bg-brand-100 text-brand-800 font-bold px-1.5 py-0.5 rounded">
+                                  IPC {listing.ipc_alt || listing.ipc_ana}
+                                </span>
+                              </div>
+                              <div className="font-semibold text-slate-900">{listing.baslik}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
+                      <h3 className="font-display font-bold text-slate-900 text-base border-b border-slate-100 pb-3">
+                        Gelen / Gönderilen İlgi Bildirimleri
+                      </h3>
+
+                      {interests.length === 0 ? (
+                        <p className="text-xs text-slate-500 text-center py-4">Henüz aktifleştirilmiş bir görüşme yok.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {interests.map(interest => {
+                            const listing = listings.find(l => l.id === interest.ilan_id);
+                            const isActive = activeChatInterestId === interest.id;
+                            return (
+                              <div
+                                key={interest.id}
+                                onClick={() => setActiveChatInterestId(interest.id)}
+                                className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+                                  isActive
+                                    ? 'bg-brand-50 border-brand-500 shadow-sm'
+                                    : 'bg-white border-slate-200 hover:border-slate-300'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between text-[11px] mb-1">
+                                  <span className="font-semibold text-slate-900">{interest.alici_sirket}</span>
+                                  {interest.durum === 'olgunlasti' ? (
+                                    <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded">
+                                      Olgunlaştı (Noter Aşaması)
+                                    </span>
+                                  ) : (
+                                    <span className="bg-sky-100 text-sky-800 text-[10px] font-medium px-2 py-0.5 rounded capitalize">
+                                      {interest.durum}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="text-xs font-medium text-slate-700 line-clamp-1">
+                                  {listing ? listing.baslik : 'İlan'}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                  </div>
+
+                  {/* RIGHT: CHAT & LEGAL ALERT */}
+                  <div className="lg:col-span-7">
+                    {activeChatInterestId ? (
+                      (() => {
+                        const interest = interests.find(i => i.id === activeChatInterestId);
+                        const listing = listings.find(l => l.id === interest?.ilan_id);
+                        const threadMsgs = messages.filter(m => m.ilgi_id === activeChatInterestId);
+
+                        return (
+                          <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col h-[600px]">
+                            
+                            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 rounded-t-xl">
+                              <div>
+                                <h4 className="font-display font-bold text-slate-900 text-sm">
+                                  {listing?.baslik}
+                                </h4>
+                                <div className="text-xs text-slate-500">
+                                  Alıcı: <span className="font-semibold">{interest?.alici_ad} ({interest?.alici_sirket})</span>
+                                </div>
+                              </div>
+
+                              {currentUser.rol === 'satici' && (
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-xs text-slate-500">Durum:</span>
+                                  <select
+                                    value={interest?.durum}
+                                    onChange={(e) => handleUpdateInterestStatus(interest.id, e.target.value)}
+                                    className="text-xs border border-slate-300 rounded px-2 py-1 bg-white font-semibold text-brand-700"
+                                  >
+                                    <option value="yeni">Yeni</option>
+                                    <option value="gorusuluyor">Görüşülüyor</option>
+                                    <option value="olgunlasti">Olgunlaştı (Anlaşma Yakın)</option>
+                                    <option value="kapandi">Kapandı</option>
+                                  </select>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* LEGAL ALERT WHEN STATUS IS OLGUNLASTI */}
+                            {interest?.durum === 'olgunlasti' && (
+                              <div className="m-4 p-4 bg-emerald-50 border-2 border-emerald-400 rounded-xl space-y-3">
+                                <div className="flex items-center space-x-2 text-emerald-900 font-bold text-xs">
+                                  <Icon name="scale" className="w-5 h-5 text-emerald-700" />
+                                  <span>HUKUKİ YÖNLENDİRME (SMK 6769 UYARISI)</span>
+                                </div>
+                                <p className="text-xs text-emerald-800 leading-relaxed font-medium">
+                                  Devir sözleşmeleri noter huzurunda yapılmak zorundadır (SMK 6769). Noter onayı olmayan devir TÜRKPATENT nezdinde hüküm doğurmaz. Bir patent vekili veya noterle iletişime geçin.
+                                </p>
+                              </div>
+                            )}
+
+                            <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/50">
+                              {threadMsgs.map(msg => {
+                                const isMe = msg.gonderen_id === currentUser.id;
+                                return (
+                                  <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                                    <div className="text-[10px] text-slate-400 mb-0.5 px-1">{msg.gonderen_ad} • {msg.tarih}</div>
+                                    <div className={`max-w-md rounded-2xl px-4 py-2.5 text-xs shadow-sm ${
+                                      isMe ? 'bg-brand-600 text-white rounded-br-none' : 'bg-white border border-slate-200 text-slate-800 rounded-bl-none'
+                                    }`}>
+                                      {msg.icerik}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            <div className="p-3 border-t border-slate-200 bg-white rounded-b-xl">
+                              <form
+                                onSubmit={(e) => {
+                                  e.preventDefault();
+                                  handleSendChatMessage(activeChatInterestId, e.target.chatInput.value);
+                                  e.target.reset();
+                                }}
+                                className="flex gap-2"
+                              >
+                                <input
+                                  type="text"
+                                  name="chatInput"
+                                  placeholder="Mesajınızı yazın..."
+                                  className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-brand-500"
+                                />
+                                <button
+                                  type="submit"
+                                  className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-1"
+                                >
+                                  <span>Gönder</span>
+                                  <Icon name="send" className="w-3.5 h-3.5" />
+                                </button>
+                              </form>
+                            </div>
+
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400 space-y-2">
+                        <Icon name="messageSquare" className="w-12 h-12 mx-auto text-slate-300" />
+                        <h4 className="font-semibold text-slate-700">Görüşme Seçilmedi</h4>
+                        <p className="text-xs text-slate-500">Sol menüden bir ilgi bildirimi seçerek mesajlaşmaya başlayabilirsiniz.</p>
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+              </div>
+            )}
+
+            {/* --- SCREEN 5: ADMIN PANELI (DOĞRULAMA & MODERASYON) --- */}
+            {activeTab === 'admin' && (
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+                
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <Icon name="shieldCheck" className="w-6 h-6 text-amber-700" />
+                    <div>
+                      <h3 className="font-bold text-amber-900 text-sm">TÜRKPATENT Sicil & IPC Moderasyon Masası</h3>
+                      <p className="text-xs text-amber-700">Sicil sorgulama bağlantılarını doğrula ve Kapsam Dışı politikaları denetle.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase">
+                      <tr>
+                        <th className="p-4">Patent / İlan Adı</th>
+                        <th className="p-4">Katman 1 (Hak)</th>
+                        <th className="p-4">Katman 2 (IPC)</th>
+                        <th className="p-4">Tescil No</th>
+                        <th className="p-4">Durum</th>
+                        <th className="p-4 text-right">İşlem</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {listings.map(l => {
+                        const hakObj = HAK_TURULERI.find(h => h.id === l.hak_turu);
+                        return (
+                          <tr key={l.id} className="hover:bg-slate-50/80">
+                            <td className="p-4 font-semibold text-slate-900 max-w-xs truncate">{l.baslik}</td>
+                            <td className="p-4 capitalize text-slate-600 font-medium">{hakObj ? hakObj.ad.split('(')[0] : l.hak_turu}</td>
+                            <td className="p-4 font-mono font-bold text-brand-700">IPC {l.ipc_alt || l.ipc_ana}</td>
+                            <td className="p-4 font-mono text-slate-600">{l.patent_no}</td>
+                            <td className="p-4">
+                              {l.sicil_durumu === 'dogrulandi' ? (
+                                <span className="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">
+                                  Doğrulandı
+                                </span>
+                              ) : (
+                                <span className="bg-amber-100 text-amber-800 font-medium px-2 py-0.5 rounded text-[10px]">
+                                  İnceleme Bekliyor
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-4 text-right">
+                              <button
+                                onClick={() => handleToggleVerification(l.id)}
+                                className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${
+                                  l.sicil_durumu === 'dogrulandi'
+                                    ? 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                                    : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm'
+                                }`}
+                              >
+                                {l.sicil_durumu === 'dogrulandi' ? 'İncelemeye Çek' : 'Doğrula & Onayla'}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* --- SCREEN 6: HUKUKİ REHBER & BİLGİLENDİRME --- */}
+            {activeTab === 'guide' && (
+              <div className="max-w-4xl mx-auto px-4 py-10 space-y-8">
+                
+                <div className="border-b border-slate-200 pb-6 text-center space-y-2">
+                  <h1 className="font-display text-3xl font-bold text-slate-900">
+                    Sınai Mülkiyet (SMK 6769) & IPC Kategori Rehberi
+                  </h1>
+                  <p className="text-slate-600 text-sm">
+                    Hak türü katmanları ve IPC Uluslararası Patent Sınıflandırması hakkında teknik bilgilendirme.
+                  </p>
+                </div>
+
+                <div className="bg-white rounded-2xl border border-slate-200 p-8 space-y-6 text-xs text-slate-700 leading-relaxed shadow-sm">
+                  
+                  <div className="space-y-3">
+                    <h3 className="font-display font-bold text-slate-900 text-base flex items-center gap-2">
+                      <Icon name="scale" className="w-5 h-5 text-brand-600" />
+                      <span>1. Katman 1 — Sınai Mülkiyet Hakkı Türleri</span>
+                    </h3>
+                    <p>
+                      Platformumuzda öncelikli olarak <strong>Patent</strong> (20 yıl koruma süreli buluşlar) ve <strong>Faydalı Model</strong> (10 yıl koruma süreli buluşlar) türleri listelenmektedir. Ayrıca Endüstriyel Tasarım (Locarno), Marka (Nice 1-45), Coğrafi İşaretler ve Entegre Devre Topografyaları için kurgusal alanlar mevcuttur.
+                    </p>
+                  </div>
+
+                  <div className="space-y-3 pt-4 border-t border-slate-100">
+                    <h3 className="font-display font-bold text-slate-900 text-base flex items-center gap-2">
+                      <Icon name="fileText" className="w-5 h-5 text-brand-600" />
+                      <span>2. Katman 2 — IPC Uluslararası Patent Sınıflandırması</span>
+                    </h3>
+                    <p>
+                      Alıcı ve sanayi kuruluşlarının sektör aramalarını kolaylaştırmak amacıyla ilanlar WIPO IPC 8 Ana Bölüm (A'dan H'ye) altında sınıflandırılmaktadır:
+                    </p>
+                    <ul className="list-disc pl-5 space-y-1 text-slate-600">
+                      <li><strong>A:</strong> İnsan İhtiyaçları (Tarım, Gıda, Sağlık)</li>
+                      <li><strong>B:</strong> İşlemler, Taşımacılık (İmalat, Ambalaj)</li>
+                      <li><strong>C:</strong> Kimya, Metalurji (Biyoteknoloji, Alaşımlar)</li>
+                      <li><strong>D:</strong> Tekstil, Kağıt</li>
+                      <li><strong>E:</strong> Sabit Yapılar (İnşaat, Madencilik)</li>
+                      <li><strong>F:</strong> Makine Mühendisliği (Motorlar, Isıtma)</li>
+                      <li><strong>G:</strong> Fizik (Bilgi İşlem / G06 Yazılım, Sensörler)</li>
+                      <li><strong>H:</strong> Elektrik (Elektronik, İletişim)</li>
+                    </ul>
+                  </div>
+
+                  <div className="space-y-3 pt-4 border-t border-slate-100">
+                    <h3 className="font-display font-bold text-slate-900 text-base flex items-center gap-2">
+                      <Icon name="ban" className="w-5 h-5 text-amber-600" />
+                      <span>3. Kapsam Dışı İlan Moderasyon Kuralı</span>
+                    </h3>
+                    <p className="bg-amber-50 p-4 rounded-xl border border-amber-200 text-amber-900">
+                      Platform politika ve etiği gereğince Silah, Mühimmat, Patlayıcı Maddeler (IPC F41, F42) ve Nükleer Silah/Hassas Malzemeler (IPC G21) içeren başvurular otomatik kısıtlamaya tabidir ve ilan kabul edilmemektedir.
+                    </p>
+                  </div>
+
+                </div>
+
+              </div>
+            )}
+
+          </main>
+
+          {/* --- MODAL 1: İLAN DETAY MODALI --- */}
+          {selectedListingDetail && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 sm:p-8 space-y-6 shadow-2xl relative">
+                
+                <button
+                  onClick={() => setSelectedListingDetail(null)}
+                  className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 p-1"
+                >
+                  <Icon name="xCircle" className="w-6 h-6" />
+                </button>
+
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="font-mono text-slate-500 font-bold">{selectedListingDetail.patent_no}</span>
+                    <span className="bg-brand-100 text-brand-800 font-bold px-2 py-0.5 rounded text-[10px]">
+                      IPC {selectedListingDetail.ipc_alt || selectedListingDetail.ipc_ana}
+                    </span>
+                    {selectedListingDetail.sicil_durumu === 'dogrulandi' ? (
+                      <span className="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">
+                        TÜRKPATENT Doğrulandı
+                      </span>
+                    ) : (
+                      <span className="bg-amber-100 text-amber-800 font-medium px-2 py-0.5 rounded text-[10px]">
+                        İncelemede
+                      </span>
+                    )}
+                  </div>
+
+                  <h2 className="font-display font-bold text-xl text-slate-900">
+                    {selectedListingDetail.baslik}
+                  </h2>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl text-xs border border-slate-100">
+                  <div>
+                    <span className="text-slate-400 block">Katman 1 (Hak Türü):</span>
+                    <span className="font-semibold text-slate-800 capitalize">
+                      {HAK_TURULERI.find(h => h.id === selectedListingDetail.hak_turu)?.ad || selectedListingDetail.hak_turu}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block">Katman 2 (IPC Sektörü):</span>
+                    <span className="font-semibold text-slate-800 font-mono">
+                      {IPC_SEKTORLERI.find(i => i.kod === selectedListingDetail.ipc_ana)?.ad}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block">Sahiplik:</span>
+                    <span className="font-semibold text-slate-800">{selectedListingDetail.satici_sirket}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block">Asgari Beklenti:</span>
+                    <span className="font-semibold text-brand-700">{selectedListingDetail.asgari_beklenti}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2 text-xs text-slate-700 leading-relaxed">
+                  <h4 className="font-bold text-slate-900 text-sm">Buluş Detayı ve Özellikleri:</h4>
+                  <p>{selectedListingDetail.aciklama}</p>
+                </div>
+
+                {selectedListingDetail.sicil_link && (
+                  <div className="pt-2">
+                    <a
+                      href={selectedListingDetail.sicil_link}
+                      target="_blank"
+                      className="inline-flex items-center space-x-2 text-xs font-semibold text-brand-600 bg-brand-50 border border-brand-200 px-3 py-2 rounded-lg hover:bg-brand-100 transition-colors"
+                    >
+                      <span>TÜRKPATENT Resmi Sicil Kaydını Gör</span>
+                      <Icon name="externalLink" className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                )}
+
+                <div className="pt-4 border-t border-slate-200 flex items-center justify-between">
+                  <button
+                    onClick={() => setSelectedListingDetail(null)}
+                    className="px-4 py-2 border border-slate-300 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50"
+                  >
+                    Kapat
+                  </button>
+
+                  <button
+                    onClick={() => setShowInterestModal(true)}
+                    className="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg shadow flex items-center gap-1.5"
+                  >
+                    <Icon name="messageSquare" className="w-4 h-4" />
+                    <span>Satıcıyla İletişime Geç (İlgileniyorum)</span>
+                  </button>
+                </div>
+
+              </div>
+            </div>
+          )}
+
+          {/* --- MODAL 2: İLGİ BİLDİRİMİ GÖNDERME MODALI --- */}
+          {showInterestModal && selectedListingDetail && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-2xl relative">
+                
+                <div className="space-y-1">
+                  <h3 className="font-display font-bold text-lg text-slate-900">
+                    İlgi Bildirimi & Mesaj Gönder
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    {selectedListingDetail.baslik}
+                  </p>
+                </div>
+
+                <div className="text-xs text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                  İlgi bildiriminiz satıcı firmaya (<span className="font-semibold">{selectedListingDetail.satici_sirket}</span>) iletilecek ve panelleriniz arasında doğrudan mesajlaşma kanalı açılacaktır.
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    İlk Mesajınız veya Sorunuz
+                  </label>
+                  <textarea
+                    rows="4"
+                    value={interestMessageText}
+                    onChange={(e) => setInterestMessageText(e.target.value)}
+                    placeholder="Örn: Bu patentin lisans şartlarını ve test raporlarını görüşmek istiyoruz..."
+                    className="w-full p-3 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-brand-500"
+                  ></textarea>
+                </div>
+
+                <div className="flex justify-end space-x-3 text-xs">
+                  <button
+                    onClick={() => setShowInterestModal(false)}
+                    className="px-4 py-2 border border-slate-300 text-slate-700 font-medium rounded-lg"
+                  >
+                    İptal
+                  </button>
+                  <button
+                    onClick={handleSendInterest}
+                    className="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-lg shadow"
+                  >
+                    İlgi Bildirimini Gönder
+                  </button>
+                </div>
+
+              </div>
+            </div>
+          )}
+
+          {/* GLOBAL FOOTER */}
+          <footer className="bg-slate-900 text-slate-400 text-xs py-10 border-t border-slate-800 mt-12">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+              
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 border-b border-slate-800 pb-6">
+                <div className="flex items-center space-x-2">
+                  <div className="w-7 h-7 rounded-lg bg-brand-600 flex items-center justify-center text-white font-bold">
+                    <Icon name="scale" className="w-4 h-4" />
+                  </div>
+                  <span className="font-display font-bold text-white text-base">PATENTPAZARI</span>
+                </div>
+                
+                <div className="flex space-x-6 text-slate-400">
+                  <button onClick={() => setActiveTab('home')} className="hover:text-white">Ana Sayfa</button>
+                  <button onClick={() => setActiveTab('listings')} className="hover:text-white">İlanlar</button>
+                  <button onClick={() => setActiveTab('guide')} className="hover:text-white">SMK 6769 Rehberi</button>
+                </div>
+              </div>
+
+              <div className="text-[11px] text-slate-500 leading-relaxed max-w-4xl">
+                <p>
+                  <strong>Genel Sorumluluk Reddi (Disclaimer):</strong> Patent Pazarı, 6769 sayılı Sınai Mülkiyet Kanunu ve WIPO IPC Uluslararası Patent Sınıflandırması kapsamında hak sahipleri ile alıcı ve yatırımcılar arasında keşfedilebilirlik sağlayan bağımsız bir portal alanıdır. Platformumuz hukuki danışmanlık veya noterlik sunmaz. Devir ve lisans işlemleri noter nezdinde yapılmak zorundadır.
+                </p>
+              </div>
+
+              <div className="flex justify-between items-center text-[10px] text-slate-600 pt-4 border-t border-slate-800/60">
+                <span>&copy; {new Date().getFullYear()} Patent Pazarı. Tüm hakları saklıdır.</span>
+                <span>IPC & SMK 6769 Sınai Mülkiyet Eşleştirme Platformu</span>
+              </div>
+
+            </div>
+          </footer>
+
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

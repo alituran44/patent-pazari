@@ -1,41 +1,38 @@
 -- ====================================================================
--- PATENT PAZARI - POSTGRESQL VERİTABANI ŞEMASI (IPC & TERSİNE İHALE)
--- Hedef Sektör: İnşaat & Sabit Yapılar (IPC Bölüm E - Section E)
+-- PATENT PAZARI - GELİŞMİŞ İLERİ SEVİYE POSTGRESQL VERİTABANI ŞEMASI
+-- Modüller: WebSocket İhale, AI Vektör Eşleşme, EKAP Scraper, S3 Data Room & NDA
 -- ====================================================================
 
--- 1. GEREKLİ EKLENTİLER (EXTENSIONS)
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "ltree";       -- Hiyerarşik ağaç sorguları için (Section.Class.Subclass.Group)
-CREATE EXTENSION IF NOT EXISTS "pg_trgm";      -- Metin araması ve trigram indeksleme için
+CREATE EXTENSION IF NOT EXISTS "ltree";
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+CREATE EXTENSION IF NOT EXISTS "vector";      -- AI Vektör Arama (pgvector)
 
 -- ====================================================================
--- 2. HİYERARŞİK IPC KATEGORİLERİ TABLOSU (WIPO IPC STANDARDI)
+-- 1. HİYERARŞİK IPC KATEGORİLERİ TABLOSU
 -- ====================================================================
 CREATE TABLE IF NOT EXISTS ipc_categories (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    code VARCHAR(15) UNIQUE NOT NULL,          -- Örn: 'E', 'E04', 'E04B', 'E04B 2/00', 'E04B 2/02'
+    code VARCHAR(15) UNIQUE NOT NULL,
     level VARCHAR(20) NOT NULL CHECK (level IN ('section', 'class', 'subclass', 'main_group', 'subgroup')),
-    title_tr TEXT NOT NULL,                     -- Türkçe Başlık (Örn: 'Binalar; Duvarlar, Çatılar, Tavanlar')
-    title_en TEXT,                              -- İngilizce Başlık (Örn: 'General building structures')
+    title_tr TEXT NOT NULL,
+    title_en TEXT,
     parent_code VARCHAR(15) REFERENCES ipc_categories(code) ON DELETE CASCADE,
-    path LTREE NOT NULL,                        -- Örn: 'E.E04.E04B.E04B_2_00'
-    is_construction_sector BOOLEAN DEFAULT FALSE, -- 'E' bölümü için hızlı filtresi (İnşaat Sektörü)
+    path LTREE NOT NULL,
+    is_construction_sector BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- Hiyerarşi İndeksleri
 CREATE INDEX IF NOT EXISTS idx_ipc_path ON ipc_categories USING GIST (path);
 CREATE INDEX IF NOT EXISTS idx_ipc_code ON ipc_categories(code);
-CREATE INDEX IF NOT EXISTS idx_ipc_parent ON ipc_categories(parent_code);
-CREATE INDEX IF NOT EXISTS idx_ipc_construction ON ipc_categories(is_construction_sector) WHERE is_construction_sector = TRUE;
 
 -- ====================================================================
--- 3. KULLANICILAR & FİRMALAR TABLOSU
+-- 2. KULLANICILAR TABLOSU
 -- ====================================================================
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email VARCHAR(255) UNIQUE NOT NULL,
-    role VARCHAR(20) NOT NULL CHECK (role IN ('inventor', 'company', 'admin')), -- Buluşçu (Satıcı) veya Kurum (Alıcı)
+    role VARCHAR(20) NOT NULL CHECK (role IN ('inventor', 'company', 'admin')),
     company_name VARCHAR(255),
     tax_number VARCHAR(50),
     is_verified BOOLEAN DEFAULT FALSE,
@@ -43,78 +40,99 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- ====================================================================
--- 4. BULUŞLAR / PATENTLER TABLOSU (SATICI TARAF)
+-- 3. BULUŞLAR / PATENTLER TABLOSU & AI VEKTÖR GÖMÜMLERİ
 -- ====================================================================
 CREATE TABLE IF NOT EXISTS patents (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    patent_number VARCHAR(50) UNIQUE NOT NULL,  -- Örn: 'TR 2024/01482 B', 'EP3819443'
+    patent_number VARCHAR(50) UNIQUE NOT NULL,
     title VARCHAR(500) NOT NULL,
     abstract TEXT NOT NULL,
-    turkpatent_status VARCHAR(50) DEFAULT 'dogrulandi', -- 'dogrulandi', 'bekliyor'
+    turkpatent_status VARCHAR(50) DEFAULT 'dogrulandi',
     listing_type VARCHAR(20) NOT NULL CHECK (listing_type IN ('satis', 'lisans', 'ortaklik')),
-    min_expectation_try NUMERIC(15, 2),        -- Asgari Beklenti Bedeli (TL)
+    min_expectation_try NUMERIC(15, 2),
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_patents_owner ON patents(owner_id);
-CREATE INDEX IF NOT EXISTS idx_patents_number ON patents(patent_number);
-CREATE INDEX IF NOT EXISTS idx_patents_title_trgm ON patents USING GIN (title gin_trgm_ops);
+-- AI Vektör Arama Tablosu (384-boyutlu SentenceTransformers / GGUF Embedding)
+CREATE TABLE IF NOT EXISTS patent_embeddings (
+    patent_id UUID PRIMARY KEY REFERENCES patents(id) ON DELETE CASCADE,
+    embedding VECTOR(384),                      -- pgvector vektör sütunu
+    semantic_summary TEXT,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
 
 -- ====================================================================
--- 5. TERSİNE İHALE TEKNOLOJİ TALEPLERİ TABLOSU (ALICI / ŞİRKET TARAF)
+-- 4. TERSİNE İHALE VE CANLI TEKLİFLER (REAL-TIME BIDDING) TABLOLARI
 -- ====================================================================
 CREATE TABLE IF NOT EXISTS reverse_auction_requests (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     company_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title VARCHAR(500) NOT NULL,
-    problem_statement TEXT NOT NULL,           -- Çözülmek istenen teknik / mühendislik problemi
-    target_specifications TEXT,                 -- Beklenen performans / malzeme / maliyet şartnamesi
+    problem_statement TEXT NOT NULL,
+    target_specifications TEXT,
     preferred_deal_type VARCHAR(20) CHECK (preferred_deal_type IN ('satis', 'lisans', 'ortaklik', 'hepsi')),
-    max_budget_try NUMERIC(15, 2),             -- Ayrılan azami bütçe (TL)
+    max_budget_try NUMERIC(15, 2),
+    current_lowest_bid_try NUMERIC(15, 2),     -- Canlı İhaledeki En Düşük Teklif
     status VARCHAR(20) DEFAULT 'open' CHECK (status IN ('open', 'in_discussion', 'closed')),
-    deadline TIMESTAMPTZ,                       -- İhale son teklif tarihi
+    source_type VARCHAR(20) DEFAULT 'manual' CHECK (source_type IN ('manual', 'ekap_scraper', 'private_procurement')),
+    deadline TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_requests_company ON reverse_auction_requests(company_id);
-CREATE INDEX IF NOT EXISTS idx_requests_status ON reverse_auction_requests(status);
-CREATE INDEX IF NOT EXISTS idx_requests_problem_trgm ON reverse_auction_requests USING GIN (problem_statement gin_trgm_ops);
+-- Canlı İhale Teklifleri Tablosu (WebSockets ile Beslenir)
+CREATE TABLE IF NOT EXISTS auction_bids (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    request_id UUID NOT NULL REFERENCES reverse_auction_requests(id) ON DELETE CASCADE,
+    bidder_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    patent_id UUID REFERENCES patents(id) ON DELETE SET NULL,
+    bid_amount_try NUMERIC(15, 2) NOT NULL,    -- Teklif Edilen Lisans/Devir Bedeli
+    proposal_note TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_bids_request ON auction_bids(request_id, bid_amount_try ASC);
 
 -- ====================================================================
--- 6. ÇOKTAN ÇOĞA (MANY-TO-MANY) İLİŞKİ ARA TABLOLARI
+-- 5. GÜVENLİ VERİ ODASI (SECURE DATA ROOM) & DİJİTAL NDA TABLOLARI
 -- ====================================================================
 
--- Patent <-> IPC İlişkisi
+-- Dijital Gizlilik Sözleşmesi (NDA) Onay Kayıtları
+CREATE TABLE IF NOT EXISTS digital_ndas (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    patent_id UUID NOT NULL REFERENCES patents(id) ON DELETE CASCADE,
+    ip_address VARCHAR(45) NOT NULL,
+    user_agent TEXT,
+    accepted_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_user_patent_nda UNIQUE (user_id, patent_id)
+);
+
+-- Izole S3 Belge Havuzu (Presigned URL)
+CREATE TABLE IF NOT EXISTS data_room_documents (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    patent_id UUID NOT NULL REFERENCES patents(id) ON DELETE CASCADE,
+    document_title VARCHAR(255) NOT NULL,
+    s3_bucket VARCHAR(255) NOT NULL,
+    s3_key VARCHAR(500) NOT NULL,
+    file_size_bytes BIGINT,
+    security_level VARCHAR(20) DEFAULT 'restricted' CHECK (security_level IN ('public', 'restricted', 'confidential')),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ====================================================================
+-- 6. ARA TABLOLAR (MANY-TO-MANY)
+-- ====================================================================
 CREATE TABLE IF NOT EXISTS patent_ipc_categories (
     patent_id UUID NOT NULL REFERENCES patents(id) ON DELETE CASCADE,
     ipc_code VARCHAR(15) NOT NULL REFERENCES ipc_categories(code) ON DELETE CASCADE,
-    is_primary BOOLEAN DEFAULT FALSE,           -- Birincil (Primary) IPC sınıfı mı?
+    is_primary BOOLEAN DEFAULT FALSE,
     PRIMARY KEY (patent_id, ipc_code)
 );
 
-CREATE INDEX IF NOT EXISTS idx_patent_ipc_code ON patent_ipc_categories(ipc_code);
-
--- Tersine İhale Talebi <-> IPC İlişkisi
 CREATE TABLE IF NOT EXISTS request_ipc_categories (
     request_id UUID NOT NULL REFERENCES reverse_auction_requests(id) ON DELETE CASCADE,
     ipc_code VARCHAR(15) NOT NULL REFERENCES ipc_categories(code) ON DELETE CASCADE,
     PRIMARY KEY (request_id, ipc_code)
 );
-
-CREATE INDEX IF NOT EXISTS idx_request_ipc_code ON request_ipc_categories(ipc_code);
-
--- ====================================================================
--- 7. ÖRNEK İNŞAAT SEKTÖRÜ (SECTION E) IPC HİYERARŞİSİ DOLDURMA
--- ====================================================================
-INSERT INTO ipc_categories (code, level, title_tr, title_en, parent_code, path, is_construction_sector) VALUES
-('E', 'section', 'SABİT YAPILAR (İNŞAAT, MADENCİLİK)', 'FIXED CONSTRUCTIONS', NULL, 'E', TRUE),
-('E01', 'class', 'Yol, Demiryolu ve Köprü İnşaatı', 'Construction of roads, railways, or bridges', 'E', 'E.E01', TRUE),
-('E02', 'class', 'Su Mühendisliği; Temeller; Toprak Kazısı', 'Hydraulic engineering; Foundations; Soil-shifting', 'E', 'E.E02', TRUE),
-('E04', 'class', 'Binalar (Bina İnşaatı, Yapı Elemanları)', 'Building', 'E', 'E.E04', TRUE),
-('E04B', 'subclass', 'Genel Yapı Elemanları; Binaların Isı/Ses Yalıtımı ve Korunması', 'General building structures; Walls, roofs, insulation', 'E04', 'E.E04.E04B', TRUE),
-('E04C', 'subclass', 'Bina Yapı Malzemeleri; Betornarme, Çelik ve Polimer Elemanlar', 'Structural elements; Building materials', 'E04', 'E.E04.E04C', TRUE),
-('E04F', 'subclass', 'Bina Tamamlama İşleri; Kaplamalar, Yaldızlar, Zemin Döşemeleri', 'Finishing work on buildings', 'E04', 'E.E04.E04F', TRUE),
-('E21', 'class', 'Yer altı Kazıları; Tüneller; Sondaj', 'Earth or rock drilling; Mining', 'E', 'E.E21', TRUE)
-ON CONFLICT (code) DO NOTHING;

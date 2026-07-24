@@ -1,12 +1,12 @@
 -- ====================================================================
 -- PATENT PAZARI - GELİŞMİŞ İLERİ SEVİYE POSTGRESQL VERİTABANI ŞEMASI
--- Modüller: WebSocket İhale, AI Vektör Eşleşme, EKAP Scraper, S3 Data Room & NDA
+-- Modüller: WebSocket İhale, AI Vektör Eşleşme, Scraper, S3 Data Room, Escrow & Komisyon
 -- ====================================================================
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "ltree";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
-CREATE EXTENSION IF NOT EXISTS "vector";      -- AI Vektör Arama (pgvector)
+CREATE EXTENSION IF NOT EXISTS "vector";
 
 -- ====================================================================
 -- 1. HİYERARŞİK IPC KATEGORİLERİ TABLOSU
@@ -39,6 +39,18 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Satıcı Banka / Alt-Üye İşyeri (Sub-Merchant) Hesap Tablosu
+CREATE TABLE IF NOT EXISTS seller_bank_accounts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    account_holder_name VARCHAR(255) NOT NULL,
+    iban VARCHAR(34) NOT NULL,
+    bank_name VARCHAR(100) NOT NULL,
+    sub_merchant_key VARCHAR(100) UNIQUE,        -- Iyzico / Stripe Sub-merchant ID
+    is_verified BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
 -- ====================================================================
 -- 3. BULUŞLAR / PATENTLER TABLOSU & AI VEKTÖR GÖMÜMLERİ
 -- ====================================================================
@@ -55,16 +67,15 @@ CREATE TABLE IF NOT EXISTS patents (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- AI Vektör Arama Tablosu (384-boyutlu SentenceTransformers / GGUF Embedding)
 CREATE TABLE IF NOT EXISTS patent_embeddings (
     patent_id UUID PRIMARY KEY REFERENCES patents(id) ON DELETE CASCADE,
-    embedding VECTOR(384),                      -- pgvector vektör sütunu
+    embedding VECTOR(384),
     semantic_summary TEXT,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ====================================================================
--- 4. TERSİNE İHALE VE CANLI TEKLİFLER (REAL-TIME BIDDING) TABLOLARI
+-- 4. TERSİNE İHALE VE CANLI TEKLİFLER TABLOLARI
 -- ====================================================================
 CREATE TABLE IF NOT EXISTS reverse_auction_requests (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -74,31 +85,53 @@ CREATE TABLE IF NOT EXISTS reverse_auction_requests (
     target_specifications TEXT,
     preferred_deal_type VARCHAR(20) CHECK (preferred_deal_type IN ('satis', 'lisans', 'ortaklik', 'hepsi')),
     max_budget_try NUMERIC(15, 2),
-    current_lowest_bid_try NUMERIC(15, 2),     -- Canlı İhaledeki En Düşük Teklif
+    current_lowest_bid_try NUMERIC(15, 2),
     status VARCHAR(20) DEFAULT 'open' CHECK (status IN ('open', 'in_discussion', 'closed')),
     source_type VARCHAR(20) DEFAULT 'manual' CHECK (source_type IN ('manual', 'ekap_scraper', 'private_procurement')),
     deadline TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- Canlı İhale Teklifleri Tablosu (WebSockets ile Beslenir)
 CREATE TABLE IF NOT EXISTS auction_bids (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     request_id UUID NOT NULL REFERENCES reverse_auction_requests(id) ON DELETE CASCADE,
     bidder_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     patent_id UUID REFERENCES patents(id) ON DELETE SET NULL,
-    bid_amount_try NUMERIC(15, 2) NOT NULL,    -- Teklif Edilen Lisans/Devir Bedeli
+    bid_amount_try NUMERIC(15, 2) NOT NULL,
     proposal_note TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_bids_request ON auction_bids(request_id, bid_amount_try ASC);
+-- ====================================================================
+-- 5. ESCROW (GÜVENLİ HAVUZ) VE KOMİSYON DAĞITIM TABLOSU
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS escrow_transactions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    patent_id UUID REFERENCES patents(id) ON DELETE SET NULL,
+    request_id UUID REFERENCES reverse_auction_requests(id) ON DELETE SET NULL,
+    buyer_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    seller_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    total_amount_try NUMERIC(15, 2) NOT NULL CHECK (total_amount_try > 0),
+    commission_rate NUMERIC(5, 4) DEFAULT 0.0500,  -- %5 Varsayılan Komisyon
+    platform_fee_try NUMERIC(15, 2) NOT NULL,       -- Total * 0.05
+    seller_payout_try NUMERIC(15, 2) NOT NULL,      -- Total * 0.95
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'in_escrow', 'released', 'refunded', 'disputed')),
+    payment_provider VARCHAR(50) DEFAULT 'iyzico_marketplace',
+    payment_transaction_id VARCHAR(100),            -- Ödeme Sağlayıcı İşlem ID (Iyzico PaymentId)
+    notary_approval_document_no VARCHAR(100),        -- Noter Devir Belge No
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    escrow_locked_at TIMESTAMPTZ,
+    released_at TIMESTAMPTZ,
+    refunded_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_escrow_status ON escrow_transactions(status);
+CREATE INDEX IF NOT EXISTS idx_escrow_buyer ON escrow_transactions(buyer_id);
+CREATE INDEX IF NOT EXISTS idx_escrow_seller ON escrow_transactions(seller_id);
 
 -- ====================================================================
--- 5. GÜVENLİ VERİ ODASI (SECURE DATA ROOM) & DİJİTAL NDA TABLOLARI
+-- 6. GÜVENLİ VERİ ODASI VE DİJİTAL NDA TABLOLARI
 -- ====================================================================
-
--- Dijital Gizlilik Sözleşmesi (NDA) Onay Kayıtları
 CREATE TABLE IF NOT EXISTS digital_ndas (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -109,7 +142,6 @@ CREATE TABLE IF NOT EXISTS digital_ndas (
     CONSTRAINT unique_user_patent_nda UNIQUE (user_id, patent_id)
 );
 
--- Izole S3 Belge Havuzu (Presigned URL)
 CREATE TABLE IF NOT EXISTS data_room_documents (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     patent_id UUID NOT NULL REFERENCES patents(id) ON DELETE CASCADE,
@@ -122,7 +154,7 @@ CREATE TABLE IF NOT EXISTS data_room_documents (
 );
 
 -- ====================================================================
--- 6. ARA TABLOLAR (MANY-TO-MANY)
+-- 7. ARA TABLOLAR (MANY-TO-MANY)
 -- ====================================================================
 CREATE TABLE IF NOT EXISTS patent_ipc_categories (
     patent_id UUID NOT NULL REFERENCES patents(id) ON DELETE CASCADE,

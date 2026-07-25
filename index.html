@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Patent Pazarı AI — Self-Hosted GGUF & pgvector Akıllı Eşleştirme</title>
-  <meta name="description" content="AWS EC2 Odysseus GGUF Modeli ve PostgreSQL pgvector HNSW Kosinüs Benzerliği İle Otomatik Patent Eşleştirme Platformu">
+  <title>Patent Pazarı — Türkiye'nin Lisans ve Satılık Buluş Portalı (PatentAuction Mimarisi)</title>
+  <meta name="description" content="PatentAuction ve yet2.com mimarisiyle Türkiye'deki patent, faydalı model ve tasarımların lisanslama ve devir platformu. GGUF AI, Escrow Güvenli Havuz ve SMK 6769 Uyumlu.">
   
-  <!-- Fonts -->
+  <!-- Google Fonts: Inter & Outfit -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -28,6 +28,7 @@
               500: '#0284c7',
               600: '#0369a1',
               700: '#075985',
+              800: '#074e74',
               900: '#0c4a6e',
             }
           }
@@ -47,6 +48,8 @@
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #f1f5f9; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .classic-border { border: 1px solid #e2e8f0; }
+    .classic-table tr:nth-child(even) { background-color: #f8fafc; }
   </style>
 </head>
 <body>
@@ -55,242 +58,307 @@
   <script type="text/babel">
     const { useState, useEffect, useMemo } = React;
 
-    const Icon = ({ name, className = "w-5 h-5" }) => {
+    // --- SVG ICONS ---
+    const Icon = ({ name, className = "w-4 h-4" }) => {
       const icons = {
-        sparkles: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />,
-        cpu: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M3 9h2m-2 6h2m14-6h2m-2 6h2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />,
-        shieldCheck: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />,
+        bulb: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />,
         search: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />,
-        scale: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m0 0l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 6l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 6l3 9" />,
+        plus: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />,
+        shieldCheck: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />,
+        sparkles: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />,
         lock: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />,
-        chevronRight: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />,
-        database: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+        eye: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />,
+        user: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />,
+        creditCard: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />,
+        externalLink: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />,
+        scale: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m0 0l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 6l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 6l3 9" />,
+        checkCircle: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
       };
       return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">{icons[name] || null}</svg>;
     };
 
-    const SAMPLE_PATENTS = [
+    // --- IPC CATEGORIES WITH COUNTS (PatentAuction style) ---
+    const IPC_CATEGORIES_WITH_COUNTS = [
+      { code: 'A', name: 'AMUSEMENT & SPORTS / HUMAN NECESSITIES', name_tr: 'A — İnsan İhtiyaçları (Tarım, Sağlık, Spor)', count: 142 },
+      { code: 'B', name: 'PERFORMING OPERATIONS & TRANSPORTING', name_tr: 'B — İşlemler, Taşımacılık (Ambalaj, Lojistik)', count: 198 },
+      { code: 'C', name: 'CHEMISTRY & METALLURGY', name_tr: 'C — Kimya, Metalurji (Biyoteknoloji)', count: 87 },
+      { code: 'D', name: 'TEXTILES & PAPER', name_tr: 'D — Tekstil, Kağıt (Dokuma, Elyaf)', count: 64 },
+      { code: 'E', name: 'FIXED CONSTRUCTIONS (BUILDING)', name_tr: 'E — Sabit Yapılar (İnşaat, Madencilik)', count: 215 },
+      { code: 'F', name: 'MECHANICAL ENGINEERING & HEATING', name_tr: 'F — Makine Mühendisliği (Motor, Enerji)', count: 173 },
+      { code: 'G', name: 'PHYSICS & COMPUTING (G06 IT)', name_tr: 'G — Fizik (G06 Bilgi İşlem, Ölçüm)', count: 310 },
+      { code: 'H', name: 'ELECTRICITY & ELECTRONICS', name_tr: 'H — Elektrik, Elektronik & İletişim', count: 245 }
+    ];
+
+    // --- DEMO USERS ---
+    const DEMO_USERS = [
+      { id: 'usr_s1', name: 'Dr. Ahmet Yılmaz', role: 'satici', company: 'Yılmaz AR-GE Ltd.', free_left: 1, verified: true },
+      { id: 'usr_s2', name: 'Ayşe Kara', role: 'satici', company: 'BiyoKimya İnovasyon A.Ş.', free_left: 0, verified: true },
+      { id: 'usr_a1', name: 'Mehmet Kaya', role: 'alici', company: 'Vestel Savunma & Otomotiv', verified: true },
+      { id: 'usr_admin', name: 'Fintek & Noter Admin', role: 'admin', company: 'TÜRKPATENT Doğrulama Masası', verified: true }
+    ];
+
+    // --- FEATURED INVENTIONS (Visual Grid) ---
+    const FEATURED_INVENTIONS = [
+      {
+        id: 'pat_001',
+        title: 'Toprak Nemi Sensörlü Otomatik Sulama Vanası Mekanizması',
+        patent_no: 'TR 2024/01124 Y',
+        ipc: 'A',
+        type: 'Faydalı Model',
+        status: 'dogrulandi',
+        model: 'Lisanslama',
+        views: 1420,
+        age: '2 saat önce',
+        abstract: 'Toprağın nem oranını kapasitif sensör dizilimi ile anlık ölçerek vana debisini güç kaynağına ihtiyaç duymadan hidro-basınçla ayarlayan sulama tescili.',
+        img_svg: (
+          <svg className="w-full h-32 bg-slate-100 rounded-lg p-4 stroke-slate-700" viewBox="0 0 100 100">
+            <rect x="25" y="20" width="50" height="40" rx="5" fill="#e2e8f0" strokeWidth="2" />
+            <circle cx="50" cy="40" r="12" fill="#0284c7" opacity="0.3" />
+            <path d="M50 60 L50 85 M40 85 L60 85" strokeWidth="3" strokeLinecap="round" />
+          </svg>
+        )
+      },
       {
         id: 'pat_004',
-        patent_number: 'TR 2023/19082 B',
         title: 'Beton Dayanıklılığını Artıran Nano-Silika Kimyasal Katkı Formülü',
-        abstract: 'Betonda C30 seviyesinden C60 seviyesine basınç dayanımı sağlayan nano-silika katkısı.',
-        owner: 'BiyoKimya İnovasyon A.Ş.',
-        ipc: 'E (İnşaat)',
-        price: '3.000.000 TL',
-        default_score: 0.942,
-        match_pct: 94.2,
-        rationale: 'Tencent Hy3 GGUF Vektör Analizi: Aradığınız C60 nano katkı gereksinimi ile %94.2 kosinüs benzerliği tespit edildi.'
+        patent_no: 'TR 2023/19082 B',
+        ipc: 'E',
+        type: 'Patent',
+        status: 'dogrulandi',
+        model: 'Devir (Satış)',
+        views: 3890,
+        age: '1 gün önce',
+        abstract: 'Geleneksel betona göre mikro kalsiyum-silikat-hidrat jel oluşumunu 2.4 kat hızlandırarak 28 günlük basınç dayanımını C30 seviyesinden C60 seviyesine çıkaran patent.',
+        img_svg: (
+          <svg className="w-full h-32 bg-slate-100 rounded-lg p-4 stroke-slate-700" viewBox="0 0 100 100">
+            <polygon points="50,15 85,35 85,75 50,95 15,75 15,35" fill="#cbd5e1" strokeWidth="2" />
+            <polygon points="50,15 85,35 50,55 15,35" fill="#94a3b8" />
+          </svg>
+        )
       },
       {
         id: 'pat_005',
-        patent_number: 'TR 2024/01482 B',
         title: 'Elektrikli Araçlar İçin Hızlı Şarj Termal Yönetim Sistemi',
-        abstract: 'Li-ion bataryaları 35°C sıcaklıkta sabitleyen mikro-kanallı sıvı soğutma manifoldu.',
-        owner: 'Yılmaz AR-GE Ltd.',
-        ipc: 'F (Makine)',
-        price: '750.000 TL + Royalti',
-        default_score: 0.887,
-        match_pct: 88.7,
-        rationale: 'Tencent Hy3 GGUF Vektör Analizi: Batarya soğutma manifoldu metniyle %88.7 anlamsal eşleşme sağlandı.'
-      },
-      {
-        id: 'pat_001',
-        patent_number: 'TR 2024/01124 Y',
-        title: 'Toprak Nemi Sensörlü Otomatik Sulama Vanası Mekanizması',
-        abstract: 'Toprak nem oranını anlık ölçerek debiyi hidro-basınçla ayarlayan sulama tescili.',
-        owner: 'Yılmaz AR-GE Ltd.',
-        ipc: 'A (Tarım)',
-        price: '500.000 TL',
-        default_score: 0.764,
-        match_pct: 76.4,
-        rationale: 'Tencent Hy3 GGUF Vektör Analizi: Sulama ve nem sensörleri metniyle %76.4 vektörel uyum.'
+        patent_no: 'TR 2024/01482 B',
+        ipc: 'F',
+        type: 'Patent',
+        status: 'bekliyor',
+        model: 'Lisanslama',
+        views: 2150,
+        age: '3 gün önce',
+        abstract: 'Aşırı şarj ve yüksek sıcaklıklarda lithium-ion hücre sıcaklığını 35°C eşiğinde sabitleyen mikro-kanallı sıvı soğutma manifoldu.',
+        img_svg: (
+          <svg className="w-full h-32 bg-slate-100 rounded-lg p-4 stroke-slate-700" viewBox="0 0 100 100">
+            <rect x="20" y="30" width="60" height="40" rx="8" fill="#38bdf8" opacity="0.4" strokeWidth="2" />
+            <path d="M30 40 H70 M30 50 H70 M30 60 H70" strokeWidth="2" strokeDasharray="4 2" />
+          </svg>
+        )
       }
     ];
 
+    // --- NEWLY LISTED PATENTS (Ranked List) ---
+    const NEWLY_LISTED_PATENTS = [
+      { id: 'pat_001', title: 'Toprak Nemi Sensörlü Otomatik Sulama Vanası Mekanizması', patent_no: 'TR 2024/01124 Y', ipc: 'A', age: '2 saat önce', views: 420 },
+      { id: 'pat_002', title: 'Gıda Ambalajında Oksijen Emici Aktif Katman Teknolojisi', patent_no: 'TR 2024/02918 B', ipc: 'B', age: '1 gün önce', views: 310 },
+      { id: 'pat_003', title: 'Tekstilde Geri Dönüştürülmüş Elyaf Harmanlama ve Büküm Yöntemi', patent_no: 'TR 2023/18402 B', ipc: 'D', age: '2 gün önce', views: 580 },
+      { id: 'pat_004', title: 'Beton Dayanıklılığını Artıran Nano-Silika Katkı Formülü', patent_no: 'TR 2023/19082 B', ipc: 'E', age: '3 gün önce', views: 3890 },
+      { id: 'pat_005', title: 'Elektrikli Araçlar İçin Hızlı Şarj Termal Yönetim Sistemi', patent_no: 'TR 2024/01482 B', ipc: 'F', age: '4 gün önce', views: 2150 },
+      { id: 'pat_006', title: 'Küçük İşletmeler İçin Düşük Maliyetli Titreşim Ölçüm Cihazı', patent_no: 'TR 2023/09912 Y', ipc: 'G', age: '5 gün önce', views: 890 },
+      { id: 'pat_007', title: 'Bulut Tabanlı Stok Tahmin Algoritması Entegre Donanım', patent_no: 'TR 2024/09931 B', ipc: 'G', age: '6 gün önce', views: 1240 },
+      { id: 'pat_008', title: 'Ev Tipi Güneş Paneli Temizleme Robotu Mekanizması', patent_no: 'TR 2024/05510 Y', ipc: 'F', age: '7 gün önce', views: 980 }
+    ];
+
+    // --- MOST VIEWED PATENTS (Ranked List) ---
+    const MOST_VIEWED_PATENTS = [
+      { id: 'pat_004', title: 'Beton Dayanıklılığını Artıran Nano-Silika Katkı Formülü', patent_no: 'TR 2023/19082 B', views: 3890, age: '3 ay önce' },
+      { id: 'pat_005', title: 'Elektrikli Araçlar İçin Hızlı Şarj Termal Yönetim Sistemi', patent_no: 'TR 2024/01482 B', views: 2150, age: '1 ay önce' },
+      { id: 'pat_001', title: 'Toprak Nemi Sensörlü Otomatik Sulama Vanası Mekanizması', patent_no: 'TR 2024/01124 Y', views: 1420, age: '4 ay önce' },
+      { id: 'pat_007', title: 'Bulut Tabanlı Stok Tahmin Algoritması Entegre Donanım', patent_no: 'TR 2024/09931 B', views: 1240, age: '2 ay önce' },
+      { id: 'pat_008', title: 'Ev Tipi Güneş Paneli Temizleme Robotu Mekanizması', patent_no: 'TR 2024/05510 Y', views: 980, age: '5 ay önce' }
+    ];
+
+    // --- MAIN REACT APP ---
     function App() {
-      const [activeTab, setActiveTab] = useState('ai_match'); // ai_match | escrow | architecture
-      const [problemQueryInput, setProblemQueryInput] = useState('Beton dayanıklılığını ve basınç mukavemetini artıran nano kimyasal formül');
-      const [isSearching, setIsSearching] = useState(false);
-      const [matchResults, setMatchResults] = useState(SAMPLE_PATENTS);
+      const [currentUser, setCurrentUser] = useState(DEMO_USERS[0]);
+      const [activeTab, setActiveTab] = useState('home'); // home | list_patent | account | pricing | escrow | ai_engine | faq
+      
+      // Search Box Filters
+      const [searchText, setSearchText] = useState('');
+      const [searchTarget, setSearchTarget] = useState('all'); // title | all
+      const [selectedIpcFilter, setSelectedIpcFilter] = useState('');
 
-      const handleAiSearch = (e) => {
-        e.preventDefault();
-        if (!problemQueryInput.trim()) return;
-        setIsSearching(true);
-
-        setTimeout(() => {
-          setIsSearching(false);
-          // Simüle edilmiş GGUF + pgvector HNSW araması
-          const q = problemQueryInput.toLowerCase();
-          const updated = SAMPLE_PATENTS.map(p => {
-            let score = p.default_score;
-            if (q.includes('beton') && p.id === 'pat_004') score = 0.968;
-            if (q.includes('şarj') || q.includes('batarya')) {
-              if (p.id === 'pat_005') score = 0.954;
-              if (p.id === 'pat_004') score = 0.420;
-            }
-            return {
-              ...p,
-              default_score: score,
-              match_pct: Math.round(score * 1000) / 10,
-              rationale: `Tencent Hy3 GGUF Vektör Analizi: "${problemQueryInput.substring(0, 35)}..." metni ile %${Math.round(score * 1000) / 10} kosinüs benzerliği.`
-            };
-          }).sort((a, b) => b.default_score - a.default_score);
-
-          setMatchResults(updated);
-        }, 600);
-      };
+      // Selected Detail Modal
+      const [selectedPatentDetail, setSelectedPatentDetail] = useState(null);
 
       return (
-        <div className="min-h-screen flex flex-col justify-between">
+        <div className="min-h-screen flex flex-col justify-between bg-slate-50 text-slate-800">
           
-          {/* HEADER BAR */}
-          <div className="bg-slate-900 text-slate-300 text-xs px-4 py-2 border-b border-slate-800 flex items-center justify-between">
+          {/* TOP DEMO SWITCHER BAR */}
+          <div className="bg-slate-900 text-slate-300 text-xs px-4 py-1.5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center space-x-2">
               <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="font-semibold text-white">AWS EC2 Odysseus GGUF Engine:</span>
-              <span className="text-slate-400">Veriler Sunucu İçinde Kalır (Dış API Bağımsızlığı) + PostgreSQL pgvector HNSW</span>
+              <span className="font-bold text-white">PatentAuction.com Mimarisi:</span>
+              <span className="text-slate-400 hidden sm:inline">Türkçe Arayüz + GGUF AI + Escrow + SMK 6769 Noter Devri</span>
             </div>
-            <div className="text-slate-400 font-mono text-[11px]">Vector Dim: 1536 | Index: HNSW</div>
+
+            <div className="flex items-center space-x-2">
+              <span className="text-slate-400">Aktif Rol:</span>
+              <div className="inline-flex rounded bg-slate-800 p-0.5 border border-slate-700">
+                {DEMO_USERS.map(u => (
+                  <button
+                    key={u.id}
+                    onClick={() => setCurrentUser(u)}
+                    className={`px-2 py-0.5 text-xs font-semibold rounded ${
+                      currentUser.id === u.id ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {u.name} ({u.role === 'satici' ? 'Satıcı' : u.role === 'alici' ? 'Alıcı' : 'Admin'})
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
-          {/* NAVBAR */}
-          <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-            <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-              <div onClick={() => setActiveTab('ai_match')} className="flex items-center space-x-3 cursor-pointer">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-slate-900 to-brand-700 flex items-center justify-center text-white shadow-md">
-                  <Icon name="cpu" className="w-6 h-6" />
+          {/* MAIN HEADER (PatentAuction Style Logo & Top Blue Nav Tabs) */}
+          <header className="bg-white border-b border-slate-200">
+            <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              
+              {/* LOGO & BRAND */}
+              <div onClick={() => setActiveTab('home')} className="cursor-pointer flex items-center gap-3">
+                <div className="w-11 h-11 bg-brand-600 rounded-xl flex items-center justify-center text-white shadow">
+                  <Icon name="bulb" className="w-7 h-7" />
                 </div>
                 <div>
-                  <span className="font-display text-xl font-bold tracking-tight text-slate-900">
-                    PATENT<span className="text-brand-600">PAZARI</span> <span className="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">GGUF AI MOTORU</span>
-                  </span>
-                  <span className="block text-[10px] text-slate-500 font-medium uppercase">
-                    Self-Hosted Tencent Hy3 GGUF & pgvector Kosinüs Benzerliği
-                  </span>
+                  <div className="font-display font-black text-2xl text-slate-900 tracking-tight">
+                    Patent<span className="text-brand-600">Pazari.com</span>
+                  </div>
+                  <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                    Patented Inventions For Sale or License in Türkiye
+                  </div>
                 </div>
               </div>
 
-              <nav className="flex items-center space-x-2 text-xs">
-                <button
-                  onClick={() => setActiveTab('ai_match')}
-                  className={`px-3.5 py-2 rounded-lg font-bold flex items-center gap-1.5 ${
-                    activeTab === 'ai_match' ? 'bg-brand-50 text-brand-600' : 'text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <Icon name="sparkles" className="w-4 h-4 text-brand-600" />
-                  <span>Akıllı Eşleştirme (AI)</span>
-                </button>
+              {/* USER PROFILE CORNER */}
+              <div className="text-xs text-right bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+                <div className="font-bold text-slate-900">{currentUser.name}</div>
+                <div className="text-slate-500">{currentUser.company} ({currentUser.role.toUpperCase()})</div>
+              </div>
+            </div>
 
+            {/* NAV TABS BAR (PatentAuction Blue Bar) */}
+            <div className="bg-brand-700 text-white border-t border-brand-800">
+              <div className="max-w-6xl mx-auto px-4 flex flex-wrap gap-1 font-display font-bold text-xs uppercase tracking-wider">
                 <button
-                  onClick={() => setActiveTab('architecture')}
-                  className={`px-3.5 py-2 rounded-lg font-bold flex items-center gap-1.5 ${
-                    activeTab === 'architecture' ? 'bg-brand-50 text-brand-600' : 'text-slate-600 hover:bg-slate-50'
-                  }`}
+                  onClick={() => setActiveTab('home')}
+                  className={`px-4 py-2.5 transition-colors ${activeTab === 'home' ? 'bg-brand-900 text-amber-300' : 'hover:bg-brand-800'}`}
                 >
-                  <Icon name="database" className="w-4 h-4 text-emerald-600" />
-                  <span>Mimarisi & HNSW İndeks</span>
+                  HOME
                 </button>
-              </nav>
+                <button
+                  onClick={() => setActiveTab('list_patent')}
+                  className={`px-4 py-2.5 transition-colors ${activeTab === 'list_patent' ? 'bg-brand-900 text-amber-300' : 'hover:bg-brand-800'}`}
+                >
+                  LIST YOUR PATENT
+                </button>
+                <button
+                  onClick={() => setActiveTab('account')}
+                  className={`px-4 py-2.5 transition-colors ${activeTab === 'account' ? 'bg-brand-900 text-amber-300' : 'hover:bg-brand-800'}`}
+                >
+                  MY ACCOUNT / PANEL
+                </button>
+                <button
+                  onClick={() => setActiveTab('escrow')}
+                  className={`px-4 py-2.5 transition-colors flex items-center gap-1 ${activeTab === 'escrow' ? 'bg-brand-900 text-amber-300' : 'hover:bg-brand-800'}`}
+                >
+                  <Icon name="lock" className="w-3.5 h-3.5 text-emerald-400" />
+                  ESCROW & FINTECH
+                </button>
+                <button
+                  onClick={() => setActiveTab('ai_engine')}
+                  className={`px-4 py-2.5 transition-colors flex items-center gap-1 ${activeTab === 'ai_engine' ? 'bg-brand-900 text-amber-300' : 'hover:bg-brand-800'}`}
+                >
+                  <Icon name="sparkles" className="w-3.5 h-3.5 text-emerald-300" />
+                  GGUF AI MOTORU
+                </button>
+                <button
+                  onClick={() => setActiveTab('pricing')}
+                  className={`px-4 py-2.5 transition-colors ${activeTab === 'pricing' ? 'bg-brand-900 text-amber-300' : 'hover:bg-brand-800'}`}
+                >
+                  PRICING
+                </button>
+                <button
+                  onClick={() => setActiveTab('faq')}
+                  className={`px-4 py-2.5 transition-colors ${activeTab === 'faq' ? 'bg-brand-900 text-amber-300' : 'hover:bg-brand-800'}`}
+                >
+                  HELP & FAQ
+                </button>
+              </div>
             </div>
           </header>
 
-          {/* MAIN CONTAINER */}
-          <main className="flex-1 max-w-7xl mx-auto px-4 py-8 w-full">
-            
-            {activeTab === 'ai_match' && (
+          {/* MAIN PAGE BODY */}
+          <main className="flex-1 max-w-6xl mx-auto px-4 py-6 w-full space-y-8">
+
+            {/* --- SCREEN 1: HOME PAGE (PATENTAUCTION EXACT LAYOUT) --- */}
+            {activeTab === 'home' && (
               <div className="space-y-8">
                 
-                {/* HERO AI QUERY SECTION */}
-                <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-brand-900 text-white rounded-3xl p-8 shadow-xl space-y-6">
-                  <div className="space-y-2 max-w-2xl">
-                    <div className="inline-flex items-center space-x-2 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-bold">
-                      <Icon name="cpu" className="w-4 h-4" />
-                      <span>AWS EC2 Sunucusunda Koşan GGUF Dil Modeli</span>
-                    </div>
-                    <h1 className="font-display text-3xl font-extrabold tracking-tight">
-                      Yapay Zeka İle Anlamsal Patent Eşleştirme
-                    </h1>
-                    <p className="text-slate-300 text-xs leading-relaxed">
-                      Alıcının teknik problemini kelimesi kelimesine aramak yerine, GGUF modelimizle 1536 boyutlu anlamsal vektöre çevirir ve PostgreSQL pgvector HNSW indeksi ile saniyeler içinde % uyum skoru veririz.
-                    </p>
-                  </div>
+                {/* 1. INTRO / HERO HEADER (PatentAuction Header Text) */}
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                  <h1 className="font-display font-extrabold text-2xl text-slate-900 border-b pb-3">
+                    PatentPazari.com lists patented inventions for sale or license in Türkiye
+                  </h1>
 
-                  <form onSubmit={handleAiSearch} className="space-y-3">
-                    <div className="flex gap-3">
-                      <input
-                        type="text"
-                        value={problemQueryInput}
-                        onChange={(e) => setProblemQueryInput(e.target.value)}
-                        placeholder="Örn: Beton dayanıklılığını C60 seviyesine çıkaran nano katkı formülü..."
-                        className="flex-1 px-4 py-3.5 rounded-xl text-slate-900 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-500 shadow"
-                      />
-                      <button
-                        type="submit"
-                        disabled={isSearching}
-                        className="bg-brand-500 hover:bg-brand-600 text-white font-bold px-6 py-3.5 rounded-xl text-xs flex items-center gap-2 shadow transition-all"
-                      >
-                        {isSearching ? <Icon name="cpu" className="w-4 h-4 animate-spin" /> : <Icon name="sparkles" className="w-4 h-4" />}
-                        <span>{isSearching ? 'Vektörleniyor...' : 'AI İle Eşleştir'}</span>
+                  <div className="grid md:grid-cols-2 gap-6 text-xs leading-relaxed text-slate-700">
+                    <div className="space-y-1.5 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                      <h3 className="font-bold text-slate-900 text-sm text-brand-700">Are you looking for new products and new ideas?</h3>
+                      <p>
+                        You came to the right place! PatentPazari.com contains hundreds of inventions, protected by TÜRKPATENT rights for sale or license by their owners. We are the largest online marketplace for patents in Türkiye. If you have questions, contact the inventor directly through the site.
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                      <h3 className="font-bold text-slate-900 text-sm text-brand-700">Are you looking to sell your patent or bring your invention to the next level?</h3>
+                      <p>
+                        List your patent for patent-pending members! Listing your patent on PatentPazari.com is fast, easy and includes <strong>first 2 free listings</strong> for inventors.
+                      </p>
+                      <button onClick={() => setActiveTab('list_patent')} className="text-brand-600 font-bold hover:underline block pt-1">
+                        Read more & List Your Invention &raquo;
                       </button>
                     </div>
-
-                    <div className="flex flex-wrap gap-2 text-[11px] text-slate-300">
-                      <span className="text-slate-400">Hızlı Örnek Aramalar:</span>
-                      <button type="button" onClick={() => setProblemQueryInput('Elektrikli araçlarda bataryayı soğutan mikro manifold')} className="underline hover:text-white">Batarya Soğutma</button>
-                      <button type="button" onClick={() => setProblemQueryInput('Beton dayanıklılığını artıran nano silika katkısı')} className="underline hover:text-white">Nano Beton</button>
-                      <button type="button" onClick={() => setProblemQueryInput('Toprak nem oranına göre sulama yapan akıllı vana')} className="underline hover:text-white">Sulama Vanası</button>
-                    </div>
-                  </form>
+                  </div>
                 </div>
 
-                {/* MATCH RESULTS SECTION */}
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center border-b pb-3 text-xs">
-                    <h3 className="font-bold text-slate-900 text-base">
-                      Kosinüs Benzerliği En Yüksek Patentler ({matchResults.length})
-                    </h3>
-                    <span className="bg-emerald-50 text-emerald-700 font-bold px-3 py-1 rounded-lg border border-emerald-200">
-                      HNSW Index Kosinüs Eşiği: >= %50
-                    </span>
-                  </div>
+                {/* 2. FEATURED INVENTIONS (Visual Grid) */}
+                <div className="space-y-3">
+                  <h2 className="font-display font-extrabold text-xl text-slate-900 border-b pb-2">
+                    Featured Inventions
+                  </h2>
 
-                  <div className="grid gap-4">
-                    {matchResults.map((item, idx) => (
-                      <div key={item.id} className="bg-white rounded-2xl border border-slate-200 p-6 space-y-3 shadow-sm hover:shadow-md transition-all">
-                        <div className="flex flex-wrap justify-between items-start gap-2 border-b pb-3">
-                          <div>
-                            <span className="font-mono text-xs text-slate-400 font-bold">{item.patent_number}</span>
-                            <h4 className="font-bold text-slate-900 text-base mt-0.5">{item.title}</h4>
-                            <div className="text-xs text-slate-500">{item.owner} • IPC: {item.ipc}</div>
+                  <div className="grid md:grid-cols-3 gap-5">
+                    {FEATURED_INVENTIONS.map(inv => (
+                      <div key={inv.id} className="bg-white rounded-xl border border-slate-200 p-4 space-y-3 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+                        <div className="space-y-2">
+                          <div className="cursor-pointer" onClick={() => setSelectedPatentDetail(inv)}>
+                            {inv.img_svg}
                           </div>
 
-                          {/* MATCH SCORE BADGE */}
-                          <div className="text-right">
-                            <div className="inline-flex items-center space-x-1.5 bg-emerald-50 text-emerald-800 border border-emerald-300 font-extrabold text-sm px-3.5 py-1 rounded-xl">
-                              <Icon name="sparkles" className="w-4 h-4 text-emerald-600" />
-                              <span>%{item.match_pct} AI Uyum</span>
-                            </div>
-                            <div className="text-[10px] text-slate-400 font-mono mt-1">Cos Score: {item.default_score}</div>
+                          <div className="flex justify-between items-center text-[11px] pt-1">
+                            <span className="font-mono text-slate-400 font-bold">{inv.patent_no}</span>
+                            <span className="bg-brand-50 text-brand-700 font-bold px-2 py-0.5 rounded">IPC {inv.ipc}</span>
                           </div>
+
+                          <h3 onClick={() => setSelectedPatentDetail(inv)} className="font-bold text-brand-700 text-sm cursor-pointer hover:underline line-clamp-2">
+                            {inv.title}
+                          </h3>
+
+                          <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed">{inv.abstract}</p>
                         </div>
 
-                        <p className="text-xs text-slate-700 leading-relaxed">{item.abstract}</p>
-
-                        {/* AI RATIONALE BANNER */}
-                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-800 flex items-start gap-2">
-                          <Icon name="cpu" className="w-4 h-4 text-brand-600 mt-0.5 shrink-0" />
-                          <div>
-                            <strong className="text-slate-900 block font-semibold mb-0.5">GGUF Vektör Eşleşme Gerekçesi:</strong>
-                            <span className="text-slate-600 leading-relaxed">{item.rationale}</span>
-                          </div>
-                        </div>
-
-                        <div className="pt-2 flex justify-between items-center text-xs">
-                          <span className="font-extrabold text-brand-700">Beklenen Lisans/Devir: {item.price}</span>
-                          <button onClick={() => alert('Görüşme talebi satıcıya iletildi.')} className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-4 py-2 rounded-xl shadow">
-                            İletişime Geç
+                        <div className="pt-2 border-t flex justify-between items-center text-[11px]">
+                          <span className="text-slate-400">{inv.age}</span>
+                          <button onClick={() => setSelectedPatentDetail(inv)} className="font-bold text-brand-600 hover:underline">
+                            View Details &raquo;
                           </button>
                         </div>
                       </div>
@@ -298,43 +366,312 @@
                   </div>
                 </div>
 
+                {/* 3. PATENT CATEGORIES SECTION (Multi-column list with counts) */}
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                  <h2 className="font-display font-extrabold text-xl text-slate-900 border-b pb-2">
+                    Patent Categories (IPC Sections A - H)
+                  </h2>
+
+                  <div className="grid md:grid-cols-2 gap-x-8 gap-y-2 text-xs">
+                    {IPC_CATEGORIES_WITH_COUNTS.map(cat => (
+                      <div
+                        key={cat.code}
+                        onClick={() => { setSelectedIpcFilter(cat.code); setActiveTab('home'); }}
+                        className="flex items-center justify-between py-1.5 border-b border-slate-100 hover:bg-slate-50 px-2 rounded cursor-pointer group"
+                      >
+                        <span className="font-semibold text-brand-700 group-hover:underline">
+                          + {cat.name}
+                        </span>
+                        <span className="font-mono text-slate-400 text-[11px] font-bold">
+                          ({cat.count})
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="pt-2 flex gap-4 text-xs font-bold text-brand-600">
+                    <button onClick={() => setSelectedIpcFilter('')} className="hover:underline">+ All patent listings ({NEWLY_LISTED_PATENTS.length})</button>
+                    <button onClick={() => setActiveTab('home')} className="hover:underline">+ All patent listings with pictures</button>
+                  </div>
+                </div>
+
+                {/* 4. FREE TEXT SEARCH BOX (PatentAuction Prominent Search) */}
+                <div className="bg-slate-100 p-6 rounded-xl border border-slate-300 shadow-inner space-y-3">
+                  <h3 className="font-display font-extrabold text-base text-slate-900">
+                    Free text search
+                  </h3>
+
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="text"
+                      value={searchText}
+                      onChange={(e) => setSearchText(e.target.value)}
+                      placeholder="Enter patent title, IPC code, or keyword..."
+                      className="flex-1 px-4 py-2.5 rounded-lg border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+                    />
+
+                    <button className="bg-slate-800 hover:bg-slate-900 text-white font-bold px-6 py-2.5 rounded-lg text-xs uppercase tracking-wider shadow">
+                      SEARCH FOR PATENTS
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-4 text-xs text-slate-600 font-semibold">
+                    <label className="flex items-center gap-1 cursor-pointer">
+                      <input type="radio" name="search_target" checked={searchTarget === 'title'} onChange={() => setSearchTarget('title')} />
+                      <span>Title only</span>
+                    </label>
+                    <label className="flex items-center gap-1 cursor-pointer">
+                      <input type="radio" name="search_target" checked={searchTarget === 'all'} onChange={() => setSearchTarget('all')} />
+                      <span>All contents</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* 5. NEWLY LISTED PATENTS (Ranked List Format) */}
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                  <h2 className="font-display font-extrabold text-xl text-slate-900 border-b pb-2">
+                    Newly listed patents
+                  </h2>
+
+                  <div className="divide-y text-xs">
+                    {NEWLY_LISTED_PATENTS.map((item, idx) => (
+                      <div key={item.id} className="py-2.5 flex items-center justify-between gap-4 hover:bg-slate-50 px-2 rounded">
+                        <div className="flex items-start gap-3">
+                          <span className="font-mono text-slate-400 font-bold w-5">{idx + 1}.</span>
+                          <div>
+                            <span onClick={() => setSelectedPatentDetail(item)} className="font-bold text-brand-700 cursor-pointer hover:underline">
+                              {item.title}
+                            </span>
+                            <div className="text-[11px] text-slate-400 font-mono mt-0.5">{item.patent_no} • IPC {item.ipc}</div>
+                          </div>
+                        </div>
+
+                        <div className="text-right text-[11px] text-slate-400 shrink-0">
+                          <div>{item.age}</div>
+                          <div className="text-slate-500 font-semibold">{item.views} views</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 6. MOST VIEWED PATENTS (Ranked List Format) */}
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                  <h2 className="font-display font-extrabold text-xl text-slate-900 border-b pb-2">
+                    Most viewed patents
+                  </h2>
+
+                  <div className="divide-y text-xs">
+                    {MOST_VIEWED_PATENTS.map((item, idx) => (
+                      <div key={item.id} className="py-2.5 flex items-center justify-between gap-4 hover:bg-slate-50 px-2 rounded">
+                        <div className="flex items-start gap-3">
+                          <span className="font-mono text-slate-400 font-bold w-5">{idx + 1}.</span>
+                          <div>
+                            <span onClick={() => setSelectedPatentDetail(item)} className="font-bold text-brand-700 cursor-pointer hover:underline">
+                              {item.title}
+                            </span>
+                            <div className="text-[11px] text-slate-400 font-mono mt-0.5">{item.patent_no} • Top Ranked</div>
+                          </div>
+                        </div>
+
+                        <div className="text-right text-[11px] text-slate-400 shrink-0">
+                          <div className="font-bold text-brand-600">{item.views} total views</div>
+                          <div>Listed {item.age}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 7. FAQ & INVENTOR RESOURCES FOOTER SECTION */}
+                <div className="grid md:grid-cols-12 gap-6 bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-xs">
+                  <div className="md:col-span-8 space-y-3 border-r pr-6">
+                    <h3 className="font-display font-extrabold text-base text-slate-900 border-b pb-2">
+                      Frequently Asked Questions
+                    </h3>
+                    <ul className="space-y-2 text-brand-700 font-semibold">
+                      <li className="hover:underline cursor-pointer" onClick={() => setActiveTab('faq')}>+ Why list your patent on PatentPazari.com?</li>
+                      <li className="hover:underline cursor-pointer" onClick={() => setActiveTab('faq')}>+ How much to list on PatentPazari.com? (First 2 Listings FREE)</li>
+                      <li className="hover:underline cursor-pointer" onClick={() => setActiveTab('faq')}>+ What is a patent pending and how do I get listed?</li>
+                      <li className="hover:underline cursor-pointer" onClick={() => setActiveTab('faq')}>+ How does Notary Escrow work under SMK 6769?</li>
+                    </ul>
+                  </div>
+
+                  <div className="md:col-span-4 space-y-3">
+                    <h3 className="font-display font-extrabold text-base text-slate-900 border-b pb-2">
+                      Interesting books for inventors
+                    </h3>
+                    <div className="space-y-2 text-slate-600">
+                      <div className="p-2.5 bg-slate-50 border rounded font-semibold text-slate-800">
+                        📖 Patent Commercialization & Licensing Guide 2024
+                      </div>
+                      <div className="p-2.5 bg-slate-50 border rounded font-semibold text-slate-800">
+                        📖 How to License Your Idea Without Spending Millions
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             )}
 
-            {/* TAB 2: ARCHITECTURE & HNSW INDEX DETAILS */}
-            {activeTab === 'architecture' && (
-              <div className="max-w-4xl mx-auto space-y-6 text-xs leading-relaxed text-slate-700">
-                <div className="border-b pb-4">
-                  <h1 className="font-display text-2xl font-bold text-slate-900">GGUF & pgvector HNSW Mimarisi</h1>
-                  <p className="text-slate-500">Dış API'lere bağımlı kalmadan AWS EC2 üzerinde lokal vektör üretimi ve pgvector indeksi.</p>
+            {/* --- SCREEN 2: LIST YOUR PATENT --- */}
+            {activeTab === 'list_patent' && (
+              <div className="max-w-3xl mx-auto bg-white p-8 rounded-xl border border-slate-200 space-y-6 shadow-sm text-xs">
+                <h1 className="font-display font-bold text-2xl text-slate-900 border-b pb-3">List Your Patent on PatentPazari.com</h1>
+                <p className="text-slate-600">First 2 listings are completely FREE for individual inventors and TTOs.</p>
+
+                <form onSubmit={(e) => { e.preventDefault(); alert('Patent ilanınız onaya gönderildi!'); setActiveTab('home'); }} className="space-y-4">
+                  <div>
+                    <label className="block font-bold mb-1">Invention / Patent Title *</label>
+                    <input type="text" required placeholder="Örn: Toprak Nemi Sensörlü Vana" className="w-full p-2.5 border rounded-lg" />
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block font-bold mb-1">IPC Section *</label>
+                      <select required className="w-full p-2.5 border rounded-lg bg-white">
+                        {IPC_CATEGORIES_WITH_COUNTS.map(c => <option key={c.code} value={c.code}>{c.name_tr}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block font-bold mb-1">TÜRKPATENT Registration No *</label>
+                      <input type="text" required placeholder="TR 2024/01124 Y" className="w-full p-2.5 border rounded-lg font-mono" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold mb-1">Abstract & Technical Advantages *</label>
+                    <textarea rows="4" required placeholder="Describe your invention..." className="w-full p-2.5 border rounded-lg"></textarea>
+                  </div>
+
+                  <button type="submit" className="w-full bg-brand-700 text-white font-bold py-3 rounded-lg text-sm shadow hover:bg-brand-800">
+                    Submit Patent Listing
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* --- SCREEN 3: MY ACCOUNT / PANEL --- */}
+            {activeTab === 'account' && (
+              <div className="bg-white p-8 rounded-xl border border-slate-200 space-y-6 shadow-sm text-xs">
+                <h1 className="font-display font-bold text-2xl text-slate-900 border-b pb-3">User Dashboard & Listings</h1>
+                <div className="p-4 bg-slate-50 rounded-lg border space-y-1">
+                  <div className="font-bold text-slate-900">{currentUser.name} ({currentUser.company})</div>
+                  <div className="text-slate-500">Role: {currentUser.role.toUpperCase()} | Free Listings Left: {currentUser.free_left}</div>
                 </div>
+              </div>
+            )}
 
-                <div className="bg-slate-900 text-slate-200 p-6 rounded-2xl space-y-4">
-                  <h3 className="font-bold text-white text-sm">1. RAM Yönetimi & Singleton Pattern</h3>
-                  <p>
-                    `llama-cpp-python` kütüphanesi RAM sızıntısını önlemek için Singleton kalıbıyla yazılmıştır. `n_ctx=2048`, `n_batch=512` ve `n_threads=4` parametreleri ile model RAM'e sadece 1 kez yüklenir.
-                  </p>
+            {/* --- SCREEN 4: ESCROW & FINTECH --- */}
+            {activeTab === 'escrow' && (
+              <div className="bg-white p-8 rounded-xl border border-slate-200 space-y-6 shadow-sm text-xs">
+                <h1 className="font-display font-bold text-2xl text-slate-900 border-b pb-3 flex items-center gap-2">
+                  <Icon name="lock" className="w-6 h-6 text-emerald-600" />
+                  <span>Iyzico Escrow (Güvenli Havuz) & Noter Devri (%5 Komisyon)</span>
+                </h1>
+                <p className="text-slate-600 leading-relaxed">
+                  Alıcının ödemesi Iyzico Alt-Üye İşyeri havuzunda bloke edilir. SMK 6769 Noter devri gerçekleştiğinde %5 platform komisyonu kesilir ve %95 net tutar satıcının IBAN hesabına otomatik aktarılır.
+                </p>
+              </div>
+            )}
 
-                  <h3 className="font-bold text-white text-sm pt-2 border-t border-slate-800">2. pgvector HNSW İndeks Stratejisi</h3>
-                  <pre className="bg-slate-950 p-4 rounded-xl text-emerald-400 font-mono text-[11px] overflow-x-auto">
-{`CREATE INDEX idx_patents_hnsw_embedding 
-ON patents USING hnsw (embedding vector_cosine_ops) 
-WITH (m = 16, ef_construction = 64);`}
-                  </pre>
-                  <p>
-                    Kosinüs mesafesi için `vector_cosine_ops` kullanılır. Sorgu anında `SET LOCAL hnsw.ef_search = 100;` yapılarak hassasiyet artırılır.
-                  </p>
+            {/* --- SCREEN 5: GGUF AI ENGINE --- */}
+            {activeTab === 'ai_engine' && (
+              <div className="bg-white p-8 rounded-xl border border-slate-200 space-y-6 shadow-sm text-xs">
+                <h1 className="font-display font-bold text-2xl text-slate-900 border-b pb-3 flex items-center gap-2">
+                  <Icon name="sparkles" className="w-6 h-6 text-brand-600" />
+                  <span>Self-Hosted Tencent Hy3 GGUF & pgvector HNSW Engine</span>
+                </h1>
+                <p className="text-slate-600 leading-relaxed">
+                  AWS EC2 Odysseus sunucumuzda çalışan GGUF modeli ile aradığınız teknoloji 1536-boyutlu vektör anlamsal kosinüs benzerliği üzerinden HNSW indeksi ile saniyeler içinde % uyum skoru verir.
+                </p>
+              </div>
+            )}
+
+            {/* --- SCREEN 6: PRICING --- */}
+            {activeTab === 'pricing' && (
+              <div className="bg-white p-8 rounded-xl border border-slate-200 space-y-6 shadow-sm text-xs">
+                <h1 className="font-display font-bold text-2xl text-slate-900 border-b pb-3">Pricing Tiers</h1>
+                <div className="grid md:grid-cols-4 gap-4">
+                  <div className="p-4 border rounded-xl bg-slate-50 space-y-2">
+                    <h3 className="font-bold text-slate-900">Starter</h3>
+                    <div className="font-display font-bold text-xl text-brand-700">FREE</div>
+                    <p className="text-slate-500">First 2 listings free</p>
+                  </div>
+                  <div className="p-4 border rounded-xl bg-slate-50 space-y-2 border-brand-500">
+                    <h3 className="font-bold text-slate-900">Standard</h3>
+                    <div className="font-display font-bold text-xl text-brand-700">499 TL / mo</div>
+                    <p className="text-slate-500">Unlimited listings</p>
+                  </div>
+                  <div className="p-4 border rounded-xl bg-slate-50 space-y-2">
+                    <h3 className="font-bold text-slate-900">Featured</h3>
+                    <div className="font-display font-bold text-xl text-brand-700">299 TL / listing</div>
+                    <p className="text-slate-500">Top placement 30 days</p>
+                  </div>
+                  <div className="p-4 border rounded-xl bg-slate-50 space-y-2">
+                    <h3 className="font-bold text-slate-900">Enterprise</h3>
+                    <div className="font-display font-bold text-xl text-brand-700">9.999 TL / yr</div>
+                    <p className="text-slate-500">Verified TTO badge</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* --- SCREEN 7: HELP & FAQ --- */}
+            {activeTab === 'faq' && (
+              <div className="bg-white p-8 rounded-xl border border-slate-200 space-y-6 shadow-sm text-xs leading-relaxed">
+                <h1 className="font-display font-bold text-2xl text-slate-900 border-b pb-3">Help & Frequently Asked Questions</h1>
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-bold text-sm text-slate-900">Why list your patent on PatentPazari.com?</h3>
+                    <p className="text-slate-600">We connect inventors directly with buyers, corporations, and investors in Türkiye.</p>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm text-slate-900">How much to list?</h3>
+                    <p className="text-slate-600">Individual inventors get their first 2 listings completely FREE.</p>
+                  </div>
                 </div>
               </div>
             )}
 
           </main>
 
-          {/* FOOTER */}
-          <footer className="bg-slate-900 text-slate-400 text-xs py-8 border-t border-slate-800">
-            <div className="max-w-7xl mx-auto px-4 flex justify-between items-center">
-              <span>&copy; {new Date().getFullYear()} Patent Pazarı AI Engine. Self-Hosted GGUF & pgvector.</span>
-              <span>AWS EC2 Odysseus Infrastructure</span>
+          {/* DETAIL MODAL */}
+          {selectedPatentDetail && (
+            <div className="fixed inset-0 bg-slate-950/70 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl p-6 max-w-lg w-full space-y-4 text-xs">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="font-mono text-slate-400 font-bold">{selectedPatentDetail.patent_no}</span>
+                    <h3 className="font-bold text-base text-slate-900 mt-0.5">{selectedPatentDetail.title}</h3>
+                  </div>
+                  <button onClick={() => setSelectedPatentDetail(null)} className="text-slate-400 font-bold">✕</button>
+                </div>
+                <p className="text-slate-700 leading-relaxed">{selectedPatentDetail.abstract}</p>
+                <div className="flex justify-end gap-2 border-t pt-3">
+                  <button onClick={() => setSelectedPatentDetail(null)} className="px-4 py-2 border rounded-lg">Close</button>
+                  <button onClick={() => { setSelectedPatentDetail(null); setActiveTab('escrow'); }} className="px-4 py-2 bg-brand-700 text-white font-bold rounded-lg">Escrow Buy & License</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* FOOTER BAR (PatentAuction Style Links) */}
+          <footer className="bg-white border-t border-slate-300 py-6 text-xs text-slate-600">
+            <div className="max-w-6xl mx-auto px-4 text-center space-y-3">
+              <div className="flex flex-wrap justify-center gap-4 font-semibold text-brand-700">
+                <button onClick={() => setActiveTab('home')} className="hover:underline">Home</button> |
+                <button onClick={() => setActiveTab('list_patent')} className="hover:underline">List a patent</button> |
+                <button onClick={() => setActiveTab('account')} className="hover:underline">Manage your account</button> |
+                <button onClick={() => setActiveTab('faq')} className="hover:underline">FAQ & Terms of use</button> |
+                <button onClick={() => setActiveTab('faq')} className="hover:underline">Contact us</button>
+              </div>
+
+              <div className="text-[11px] text-slate-400 font-mono">
+                Copyright &copy; {new Date().getFullYear()} PatentPazari.com. All rights reserved.<br />
+                Page generated in 0.012s. PatentPazari Time.
+              </div>
             </div>
           </footer>
 
